@@ -15,7 +15,7 @@ import bricks.var.Vars;
 import bricks.wall.Brick;
 import suite.suite.action.Statement;
 
-public class Button extends Brick implements Positioned<Button> {
+public class Button extends Brick<Host> implements Positioned<Button> {
 
     ColorRectangle rect;
     ColorText text;
@@ -45,7 +45,7 @@ public class Button extends Brick implements Positioned<Button> {
         selectColor = Vars.set(Color.mix(1, .8, .6));
         selected = Vars.set(false);
 
-        text = text().setText("Click me!").setSize(20).setColor(Color.mix(1,1,1))
+        text = text().setString("Click me!").setSize(20).setColor(Color.mix(1,1,1))
                 .setOrigin(XOrigin.CENTER, YOrigin.CENTER);
         width = Vars.let(text.width().per(Number::floatValue).per(w -> w + 50));
         height = Vars.let(text.size().per(s -> s.floatValue() + 40));
@@ -53,8 +53,8 @@ public class Button extends Brick implements Positioned<Button> {
         rect.color().set(rectColor.get());
         selectRect = rect().setOrigin(XOrigin.CENTER, YOrigin.CENTER);
         selectRect.color().set(selectColor.get());
-        selectRect.width().let(rect.width(), x -> x.floatValue() + 4);
-        selectRect.height().let(rect.height(), x -> x.floatValue() + 4);
+        selectRect.width().let(rect.width().per(w -> w.floatValue() + 4));
+        selectRect.height().let(rect.height().per(h -> h.floatValue() + 4));
         selectRect.position().let(rect.position());
 
         textRect = rect().setOrigin(XOrigin.CENTER, YOrigin.CENTER);
@@ -66,7 +66,7 @@ public class Button extends Brick implements Positioned<Button> {
 
         rect.setPosition(400, 300);
 
-        pressingMonitor = when(mouse().leftButton().willGive(Mouse.Button::pressing)).then(()-> {
+        pressingMonitor = when(mouse().leftButton().willBe(Mouse.Button::pressed)).then(()-> {
             if(rect.contains(mouse().position())) {
                 select();
             } else {
@@ -74,7 +74,7 @@ public class Button extends Brick implements Positioned<Button> {
             }
         }, false);
 
-        releasingMonitor = when(mouse().leftButton().willGive(Mouse.Button::releasing)).then(()-> {
+        releasingMonitor = when(mouse().leftButton().willBe(Mouse.Button::released)).then(()-> {
             if(rect.contains(mouse().position()) && selected.get()) {
                 click();
             }
@@ -190,7 +190,7 @@ public class Button extends Brick implements Positioned<Button> {
     }
 
     public Button setNote(String note) {
-        this.text.setText(note);
+        this.text.setString(note);
         return this;
     }
 }

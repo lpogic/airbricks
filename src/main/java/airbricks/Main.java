@@ -1,9 +1,15 @@
 package airbricks;
 
 import airbricks.model.Button;
-import airbricks.model.Imp;
 import airbricks.model.Note;
+import bricks.graphic.ColorText;
+import bricks.var.Sup;
+import bricks.var.Var;
+import bricks.var.Vars;
 import bricks.wall.Wall;
+import suite.suite.action.Statement;
+
+import java.util.Arrays;
 
 import static suite.suite.$uite.$;
 
@@ -24,7 +30,6 @@ public class Main extends Wall {
         when(button.selected(), note::select, note::unselect);
         use(button);
         use(note);
-//        use(button().setPosition(700, 300));
 
     }
 

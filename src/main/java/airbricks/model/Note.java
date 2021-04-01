@@ -8,48 +8,53 @@ import bricks.font.BackedFont;
 import bricks.font.FontManager;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
-import bricks.input.Keyboard;
 import bricks.input.Mouse;
-import bricks.monitor.Monitor;
 import bricks.trade.Host;
 import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.wall.Brick;
-import suite.suite.Subject;
-import suite.suite.action.Statement;
+import suite.suite.util.Cascade;
 
-public class Note extends Brick {
+public class Note extends Brick<Host> {
 
     ColorText text;
-    ColorRectangle caret;
-    Var<Integer> caretPosition;
-
-    Var<Boolean> selected;
-
-    Monitor selectMonitor;
-    Monitor unselectMonitor;
-
-//    Monitor keyLeftMonitor;
-//    Monitor keyRightMonitor;
-//    Monitor keyBackspaceMonitor;
+    ColorRectangle cursor;
+    Var<Integer> cursorPosition;
+    NoteCars cars;
 
     public Note(Host host) {
         super(host);
 
         selected = Vars.set(false);
+        when(selected, this::_select, this::_unselect);
+        shown = Vars.set(false);
+        when(shown, this::_show, this::_hide);
+        clicked = Vars.get();
 
-        text = text().setText("Fill me!").setSize(20).setColor(Color.mix(1,1,1))
+        when(mouse().leftButton().willBe(Mouse.Button::pressed)).then(() -> {
+            float x = switch (text.getXOrigin()) {
+                case CENTER -> text.getPosition().getX() - text.getWidth() / 2;
+                case LEFT -> text.getPosition().getX();
+                case RIGHT -> text.getPosition().getX() - text.getWidth();
+            };
+            cursorPosition.set(order(FontManager.class).getFont(text.getFont())
+                    .getCarriagePosition(text.getString(), text.getSize(), x, mouse().position().get().getX()));
+        });
+
+        text = text().setString("Fill me!").setSize(20).setColor(Color.mix(1,1,1))
                 .setOrigin(XOrigin.CENTER, YOrigin.CENTER).setPosition(400, 300);
-        caretPosition = Vars.set(0);
-        caret = rect().setWidth(1);
-        caret.height().let(text.size());
-        caret.color().let(text.color());
-        caret.yOrigin().let(text.yOrigin());
-        caret.position().preserve(() -> {
-           int pos = caretPosition.get();
+
+        cursorPosition = Vars.set(0);
+
+        cursor = rect().setWidth(1);
+        cursor.height().let(text.size());
+        cursor.color().let(text.color());
+        cursor.yOrigin().let(text.yOrigin());
+        cursor.position().let(() -> {
+           int pos = cursorPosition.get();
            BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getSize());
-           float xOffset = font.getLoadedFont().getStringWidth(text.getText().substring(0, pos), text.getSize());
+           float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, pos), text.getSize());
            Point textPosition = text.getPosition();
            XOrigin xOrigin = text.getXOrigin();
            return switch (xOrigin) {
@@ -60,58 +65,18 @@ public class Note extends Brick {
                case RIGHT -> new Point(textPosition.getX() - text.getWidth() + xOffset,
                        textPosition.getY() + font.getScaledDescent() / 2);
            };
-        }, text.font(), text.width(), text.text(), text.size(), text.position(), text.xOrigin(), caretPosition);
+        }, text.font(), text.width(), text.text(), text.size(), text.position(), text.xOrigin(), cursorPosition);
 
-        Subject $m = when(selected, () -> use(caret), () -> cancel(caret));
-        selectMonitor = $m.in("rising").asExpected();
-        selectMonitor.cancel();
-        unselectMonitor = $m.in("falling").asExpected();
-        unselectMonitor.cancel();
-//        keyRightMonitor = when(order(Keyboard.class).key(262).willGive(Keyboard.Key::holding))
-//                .then(() -> {
-//                    int caretPos = caretPosition.get();
-//                    if(caretPos < text.getText().length()) {
-//                        caretPosition.set(caretPos + 1);
-//                    }
-//                }, false);
-//        keyLeftMonitor = when(order(Keyboard.class).key(263).willGive(Keyboard.Key::holding))
-//                .then(() -> {
-//                    int caretPos = caretPosition.get();
-//                    if(caretPos > 0) {
-//                        caretPosition.set(caretPos - 1);
-//                    }
-//                }, false);
-//        keyBackspaceMonitor = when(order(Keyboard.class).key(259).willGive(Keyboard.Key::holding))
-//                .then(() -> {
-//                    int caretPos = caretPosition.get();
-//                    if(caretPos > 0) {
-//                        caretPosition.set(caretPos - 1);
-//                        String txt = text.getText();
-//                        text.setText(txt.substring(0, caretPos - 1) + txt.substring(caretPos));
-//                    }
-//                }, false);
-    }
-
-    Var<Boolean> shown = Vars.set(false);
-    @Override
-    public void show() {
-        shown.set(true);
-        Monitor.useAll(selectMonitor, unselectMonitor);
-        show(text);
-    }
-
-    @Override
-    public void hide() {
-        hide(text);
-        Monitor.cancelAll(selectMonitor, unselectMonitor);
-        shown.set(false);
+        cars = new NoteCars(this);
+        cars.head().let(cursorPosition);
+        cars.tail().let(cursorPosition);
     }
 
     @Override
     public void update() {
         super.update();
 
-        if(selected.get()) {
+        if(isSelected()) {
             var mouse = mouse();
             if(mouse.leftButton().isPressed()) {
                 float x = switch (text.getXOrigin()) {
@@ -119,80 +84,306 @@ public class Note extends Brick {
                     case LEFT -> text.getPosition().getX();
                     case RIGHT -> text.getPosition().getX() - text.getWidth();
                 };
-                caretPosition.set(order(FontManager.class).getFont(text.getFont())
-                        .getCarriagePosition(text.getText(), text.getSize(), x, mouse().position().get().getX()));
+                cursorPosition.set(order(FontManager.class).getFont(text.getFont())
+                        .getCarriagePosition(text.getString(), text.getSize(), x, mouse().position().get().getX()));
             }
 
             var keyboard = keyboard();
-            int caretPos = caretPosition.get();
-            StringBuilder stringBuilder = new StringBuilder();
-            for(var che : keyboard.getCharEvents()) {
-                stringBuilder.appendCodePoint(che.getCodepoint());
-            }
-            int sbLength = stringBuilder.length();
-            if(sbLength > 0) {
+            var charEvents = keyboard.getCharEvents();
+            if(charEvents.size() > 0) {
+                int cursorPos = cursorPosition.get();
+                StringBuilder stringBuilder = new StringBuilder();
+                for (var che : keyboard.getCharEvents()) {
+                    stringBuilder.appendCodePoint(che.getCodepoint());
+                }
                 String inset = stringBuilder.toString();
-                String txt = text.getText();
-                text.setText(txt.substring(0, caretPos) + inset + txt.substring(caretPos));
-                caretPos += sbLength;
-                caretPosition.set(caretPos);
+                String str = text.getString();
+                if(cars.isAny()) {
+                    int[] minMax = cars.getMinMax();
+                    text.setString(str.substring(0, minMax[0]) + inset + str.substring(minMax[1]));
+                    cursorPosition.set(minMax[0] + inset.length());
+                    cars.reset();
+                } else {
+                    text.setString(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
+                    cursorPosition.set(cursorPos + inset.length());
+                }
             }
-            for(var e : keyboard.getEvents()) {
-                if(e.isHold()) {
-                    System.out.println(e.key);
-                    if(e.key.isNumPad() && !e.isNumLocked()) {
+
+            var keyEvents = keyboard.getEvents();
+            if(keyEvents.size() > 0) {
+                int cursorPos = cursorPosition.get();
+                for (var e : keyboard.getEvents()) {
+                    if (e.isHold()) {
+                        if (e.key.isNumPad() && !e.isNumLocked()) {
+                            switch (e.key) {
+                                case NUM_7_HOME -> {
+                                    if(cars.isAny()) {
+                                        if(e.isShifted()) {
+                                            cars.headIndex.set(0);
+                                        } else {
+                                            cars.reset();
+                                        }
+                                    } else {
+                                        if(e.isShifted()) {
+                                            cars.tailIndex.set(cursorPos);
+                                            cars.headIndex.set(0);
+                                        }
+                                    }
+                                    cursorPosition.set(0);
+                                }
+                                case NUM_1_END -> {
+                                    if(cars.isAny()) {
+                                        if(e.isShifted()) {
+                                            cars.headIndex.set(text.getString().length());
+                                        } else {
+                                            cars.reset();
+                                        }
+                                    } else {
+                                        if(e.isShifted()) {
+                                            cars.tailIndex.set(cursorPos);
+                                            cars.headIndex.set(text.getString().length());
+                                        }
+                                    }
+                                    cursorPosition.set(text.getString().length());
+                                }
+                            }
+                        }
                         switch (e.key) {
-                            case NUM_7_HOME -> caretPosition.set(0);
-                            case NUM_1_END -> caretPosition.set(text.getText().length());
-                        }
-                    }
-                    switch (e.key) {
-                        case BACKSPACE -> {
-                            if (caretPos > 0) {
-                                caretPosition.set(caretPos - 1);
-                                String txt = text.getText();
-                                text.setText(txt.substring(0, caretPos - 1) + txt.substring(caretPos));
+                            case BACKSPACE -> {
+                                if(cars.isAny()) {
+                                    int[] minMax = cars.getMinMax();
+                                    String str = text.getString();
+                                    text.setString(str.substring(0, minMax[0]) + str.substring(minMax[1]));
+                                    cursorPosition.set(minMax[0]);
+                                    cars.reset();
+                                } else {
+                                    if (cursorPos > 0) {
+                                        cursorPosition.set(cursorPos - 1);
+                                        String txt = text.getString();
+                                        text.setString(txt.substring(0, cursorPos - 1) + txt.substring(cursorPos));
+                                    }
+                                }
+                            }
+                            case LEFT -> {
+                                int head = cars.getHead();
+                                int tail = cars.getTail();
+                                if(e.isShifted()) {
+                                    if(e.isControlled()) {
+                                        if(e.isAltered()) {
+                                            if(tail < head) {
+                                                cars.tailIndex.set(head);
+                                                cars.headIndex.set(tail);
+                                                cursorPosition.set(tail);
+                                            }
+                                        } else {
+                                            if (cursorPos > 0) {
+                                                int jump = ctrlJump(cursorPos, true);
+                                                if(!cars.isAny()) {
+                                                    cars.tailIndex.set(cursorPos);
+                                                }
+                                                cars.headIndex.set(cursorPos - jump);
+                                                cursorPosition.set(cursorPos - jump);
+                                            }
+                                        }
+                                    } else {
+                                        if(cars.isAny()) {
+                                            if (cursorPos > 0) {
+                                                cars.headIndex.set(cursorPos - 1);
+                                                cursorPosition.set(cursorPos - 1);
+                                            }
+                                        } else {
+                                            cars.tailIndex.set(cursorPos);
+                                            if (cursorPos > 0) {
+                                                cars.headIndex.set(cursorPos - 1);
+                                                cursorPosition.set(cursorPos - 1);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if(e.isControlled()) {
+                                        if (cursorPos > 0) {
+                                            if (cars.isAny()) {
+                                                cars.reset();
+                                            }
+                                            int jump = ctrlJump(cursorPos, true);
+                                            cursorPosition.set(cursorPos - jump);
+                                        }
+                                    } else {
+                                        if (cars.isAny()) {
+                                            cursorPosition.set(cars.getMinIndex());
+                                            cars.reset();
+                                        } else {
+                                            if (cursorPos > 0) {
+                                                cursorPosition.set(cursorPos - 1);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            case RIGHT -> {
+                                int head = cars.getHead();
+                                int tail = cars.getTail();
+                                if(e.isShifted()) {
+                                    if(e.isControlled()) {
+                                        if(e.isAltered()) {
+                                            if(tail > head) {
+                                                cars.tailIndex.set(head);
+                                                cursorPosition.set(tail);
+                                                cars.headIndex.set(tail);
+                                            }
+                                        } else {
+                                            if (cursorPos < text.getString().length()) {
+                                                int jump = ctrlJump(cursorPos, false);
+                                                if(!cars.isAny()) {
+                                                    cars.tailIndex.set(cursorPos);
+                                                }
+                                                cars.headIndex.set(cursorPos + jump);
+                                                cursorPosition.set(cursorPos + jump);
+                                            }
+                                        }
+                                    } else {
+                                        if(cars.isAny()) {
+                                            if (cursorPos < text.getString().length()) {
+                                                cursorPosition.set(cursorPos + 1);
+                                                cars.headIndex.set(cursorPos + 1);
+                                            }
+                                        } else {
+                                            cars.tailIndex.set(cursorPos);
+                                            if (cursorPos < text.getString().length()) {
+                                                cursorPosition.set(cursorPos + 1);
+                                                cars.headIndex.set(cursorPos + 1);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if(e.isControlled()) {
+                                        if (cursorPos < text.getString().length()) {
+                                            if (cars.isAny()) {
+                                                cars.reset();
+                                            }
+                                            int jump = ctrlJump(cursorPos, false);
+                                            cursorPosition.set(cursorPos + jump);
+                                        }
+                                    } else {
+                                        if (cars.isAny()) {
+                                            cursorPosition.set(cars.getMaxIndex());
+                                            cars.reset();
+                                        } else {
+                                            if (cursorPos < text.getString().length()) {
+                                                cursorPosition.set(cursorPos + 1);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            case HOME -> {
+                                if(cars.isAny()) {
+                                    if(e.isShifted()) {
+                                        cars.headIndex.set(0);
+                                    } else {
+                                        cars.reset();
+                                    }
+                                } else {
+                                    if(e.isShifted()) {
+                                        cars.tailIndex.set(cursorPos);
+                                        cars.headIndex.set(0);
+                                    }
+                                }
+                                cursorPosition.set(0);
+                            }
+                            case END -> {
+                                if(cars.isAny()) {
+                                    if(e.isShifted()) {
+                                        cars.headIndex.set(text.getString().length());
+                                    } else {
+                                        cars.reset();
+                                    }
+                                } else {
+                                    if(e.isShifted()) {
+                                        cars.tailIndex.set(cursorPos);
+                                        cars.headIndex.set(text.getString().length());
+                                    }
+                                }
+                                cursorPosition.set(text.getString().length());
                             }
                         }
-                        case LEFT -> {
-                            if(caretPos > 0) {
-                                caretPosition.set(caretPos - 1);
-                            }
-                        }
-                        case RIGHT -> {
-                            if(caretPos < text.getText().length()) {
-                                caretPosition.set(caretPos + 1);
-                            }
-                        }
-                        case HOME -> caretPosition.set(0);
-                        case END -> caretPosition.set(text.getText().length());
                     }
                 }
             }
         }
     }
 
-    Statement click = () -> {};
-    public void click() {
-        click.play();
-        select();
+    private int ctrlJump(int cursorPos, boolean reverse) {
+
+        Cascade<Integer> cps;
+        if(reverse) {
+            StringBuilder str = new StringBuilder(text.getString().substring(0, cursorPos));
+            cps = new Cascade<>(str.reverse().codePoints().iterator());
+        } else {
+            cps = new Cascade<>(text.getString().substring(cursorPos)
+                    .codePoints().iterator());
+        }
+        int jump = 1;
+        boolean acceptWhitespaces = Character.isWhitespace(cps.next());
+        for (var cp : cps) {
+            if(acceptWhitespaces == Character.isWhitespace(cp)) {
+                ++jump;
+            } else break;
+        }
+        return jump;
     }
 
-    public void click(Statement whenClick) {
-        click = whenClick;
+
+    Var<Boolean> shown;
+    protected void _show() {
+        show(text);
+    }
+
+    protected void _hide() {
+        hide(text);
+    }
+
+    @Override
+    public void show() {
+        shown.set(true);
+    }
+
+    @Override
+    public void hide() {
+        shown.set(false);
+        selected.set(false);
+    }
+
+    public boolean isShown() {
+        return shown.get();
+    }
+
+    public Var<Boolean> shown() {
+        return shown;
+    }
+
+
+    Var<Boolean> selected;
+
+    protected void _select() {
+        use(cursor);
+        use(cars, text);
+    }
+
+    protected void _unselect() {
+        cancel(cursor);
+        cancel(cars);
     }
 
     public void select() {
-//        Monitor.useAll(keyLeftMonitor, keyRightMonitor, keyBackspaceMonitor);
         selected.set(true);
     }
 
     public void unselect() {
-//        Monitor.cancelAll(keyLeftMonitor, keyRightMonitor, keyBackspaceMonitor);
         selected.set(false);
     }
 
-    public Source<Boolean> selected() {
+    public Var<Boolean> selected() {
         return selected;
     }
 
@@ -200,11 +391,18 @@ public class Note extends Brick {
         return selected.get();
     }
 
-    public boolean isShown() {
-        return shown.get();
+    Var<Number> clicked;
+
+    public void click() {
+        clicked.set(System.currentTimeMillis());
+        selected.set(true);
     }
 
-    public Var<String> label() {
+    public Var<Number> clicked() {
+        return clicked;
+    }
+
+    public Var<String> string() {
         return text.text();
     }
 
