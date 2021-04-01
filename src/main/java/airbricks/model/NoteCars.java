@@ -27,14 +27,14 @@ public class NoteCars extends Brick<Note> {
         tailIndex = Vars.set(0);
 
         body = rect().setXOrigin(XOrigin.LEFT);
-        body.height().let(host.at(n -> n.text.size()));
+        body.height().let(host.at(n -> n.text.height()));
         body.color().let(color);
         body.yOrigin().let(host.at(n -> n.text.yOrigin()));
         body.position().let(() -> {
             ColorText text = getHost().text;
             int begin = getMinIndex();
-            BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getSize());
-            float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, begin), text.getSize());
+            BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getHeight());
+            float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, begin), text.getHeight());
             Point textPosition = text.getPosition();
             XOrigin xOrigin = text.getXOrigin();
             return switch (xOrigin) {
@@ -46,15 +46,15 @@ public class NoteCars extends Brick<Note> {
                         textPosition.getY() + font.getScaledDescent() / 2);
             };
         }, host, host.at(n -> n.text.font()), host.at(Note::string), host.at(Note::width),
-                host.at(n -> n.text.size()), host.at(n -> n.text.position()),
+                host.at(n -> n.text.height()), host.at(n -> n.text.position()),
                 host.at(n -> n.text.xOrigin()), headIndex, tailIndex);
         body.width().let(() -> {
             var text = getHost().text;
             int[] minMax = getMinMax();
             LoadedFont font = order(FontManager.class).getFont(text.getFont());
             String str = text.getString().substring(minMax[0], minMax[1]);
-            return font.getStringWidth(str, text.getSize());
-        }, host.at(n -> n.text.font()), host.at(Note::string), host.at(n -> n.text.size()),
+            return font.getStringWidth(str, text.getHeight());
+        }, host.at(n -> n.text.font()), host.at(Note::string), host.at(n -> n.text.height()),
                 headIndex, tailIndex);
     }
 

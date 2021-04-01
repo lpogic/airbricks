@@ -2,14 +2,7 @@ package airbricks;
 
 import airbricks.model.Button;
 import airbricks.model.Note;
-import bricks.graphic.ColorText;
-import bricks.var.Sup;
-import bricks.var.Var;
-import bricks.var.Vars;
 import bricks.wall.Wall;
-import suite.suite.action.Statement;
-
-import java.util.Arrays;
 
 import static suite.suite.$uite.$;
 
@@ -25,9 +18,12 @@ public class Main extends Wall {
     @Override
     protected void setup() {
         var note = note();
-        var button = button().setPosition(400, 300).setNote("");
-        button.width().let(note.width().per(w -> w.floatValue() + 50));
-        when(button.selected(), note::select, note::unselect);
+        var button = button().setPosition(400, 300);
+        button.setWidth(200);
+        button.height().let(note.text().height().per(h -> h.floatValue() + 20));
+        when(button.clicked()).then(note::select);
+        when(button.clicked()).then(() -> System.out.print("click!"));
+        when(button.selected().willGive(false)).then(note::unselect);
         use(button);
         use(note);
 

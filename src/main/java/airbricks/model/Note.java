@@ -39,22 +39,22 @@ public class Note extends Brick<Host> {
                 case RIGHT -> text.getPosition().getX() - text.getWidth();
             };
             cursorPosition.set(order(FontManager.class).getFont(text.getFont())
-                    .getCarriagePosition(text.getString(), text.getSize(), x, mouse().position().get().getX()));
+                    .getCarriagePosition(text.getString(), text.getHeight(), x, mouse().position().get().getX()));
         });
 
-        text = text().setString("Fill me!").setSize(20).setColor(Color.mix(1,1,1))
+        text = text().setString("Fill me!").setHeight(20).setColor(Color.mix(1,1,1))
                 .setOrigin(XOrigin.CENTER, YOrigin.CENTER).setPosition(400, 300);
 
         cursorPosition = Vars.set(0);
 
         cursor = rect().setWidth(1);
-        cursor.height().let(text.size());
+        cursor.height().let(text.height());
         cursor.color().let(text.color());
         cursor.yOrigin().let(text.yOrigin());
         cursor.position().let(() -> {
            int pos = cursorPosition.get();
-           BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getSize());
-           float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, pos), text.getSize());
+           BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getHeight());
+           float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, pos), text.getHeight());
            Point textPosition = text.getPosition();
            XOrigin xOrigin = text.getXOrigin();
            return switch (xOrigin) {
@@ -65,7 +65,7 @@ public class Note extends Brick<Host> {
                case RIGHT -> new Point(textPosition.getX() - text.getWidth() + xOffset,
                        textPosition.getY() + font.getScaledDescent() / 2);
            };
-        }, text.font(), text.width(), text.text(), text.size(), text.position(), text.xOrigin(), cursorPosition);
+        }, text.font(), text.width(), text.string(), text.height(), text.position(), text.xOrigin(), cursorPosition);
 
         cars = new NoteCars(this);
         cars.head().let(cursorPosition);
@@ -85,7 +85,7 @@ public class Note extends Brick<Host> {
                     case RIGHT -> text.getPosition().getX() - text.getWidth();
                 };
                 cursorPosition.set(order(FontManager.class).getFont(text.getFont())
-                        .getCarriagePosition(text.getString(), text.getSize(), x, mouse().position().get().getX()));
+                        .getCarriagePosition(text.getString(), text.getHeight(), x, mouse().position().get().getX()));
             }
 
             var keyboard = keyboard();
@@ -324,11 +324,21 @@ public class Note extends Brick<Host> {
                     .codePoints().iterator());
         }
         int jump = 1;
-        boolean acceptWhitespaces = Character.isWhitespace(cps.next());
+        boolean nonWhitespaceFound = false;
         for (var cp : cps) {
-            if(acceptWhitespaces == Character.isWhitespace(cp)) {
-                ++jump;
-            } else break;
+            if(Character.isWhitespace(cp)) {
+                if(nonWhitespaceFound) break;
+                else {
+                    if(cps.hasNext()) {
+                        ++jump;
+                    }
+                }
+            } else {
+                nonWhitespaceFound = true;
+                if(cps.hasNext()) {
+                    ++jump;
+                }
+            }
         }
         return jump;
     }
@@ -403,7 +413,7 @@ public class Note extends Brick<Host> {
     }
 
     public Var<String> string() {
-        return text.text();
+        return text.string();
     }
 
     public float getWidth() {
