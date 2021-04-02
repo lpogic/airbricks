@@ -21,9 +21,10 @@ public class Main extends Wall {
         var button = button().setPosition(400, 300);
         button.setWidth(200);
         button.height().let(note.text().height().per(h -> h.floatValue() + 20));
-        when(button.clicked()).then(note::select);
-        when(button.clicked()).then(() -> System.out.print("click!"));
-        when(button.selected().willGive(false)).then(note::unselect);
+        note.selected().let(button.selected());
+//        when(button.clicked()).then(note::select);
+//        when(button.clicked()).then(() -> System.out.print("click!"));
+//        when(button.selected().willGive(false)).then(note::unselect);
         use(button);
         use(note);
 

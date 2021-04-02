@@ -9,10 +9,13 @@ import bricks.font.FontManager;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
 import bricks.input.Mouse;
+import bricks.input.Story;
+import bricks.input.UserAction;
 import bricks.trade.Host;
 import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.impulse.Impulse;
 import bricks.wall.Brick;
 import suite.suite.util.Cascade;
 
@@ -23,6 +26,8 @@ public class Note extends Brick<Host> {
     Var<Integer> cursorPosition;
     NoteCars cars;
 
+    Impulse mousePress;
+
     public Note(Host host) {
         super(host);
 
@@ -30,17 +35,8 @@ public class Note extends Brick<Host> {
         when(selected, this::_select, this::_unselect);
         shown = Vars.set(false);
         when(shown, this::_show, this::_hide);
-        clicked = Vars.get();
 
-        when(mouse().leftButton().willBe(Mouse.Button::pressed)).then(() -> {
-            float x = switch (text.getXOrigin()) {
-                case CENTER -> text.getPosition().getX() - text.getWidth() / 2;
-                case LEFT -> text.getPosition().getX();
-                case RIGHT -> text.getPosition().getX() - text.getWidth();
-            };
-            cursorPosition.set(order(FontManager.class).getFont(text.getFont())
-                    .getCarriagePosition(text.getString(), text.getHeight(), x, mouse().position().get().getX()));
-        });
+        mousePress = mouse().leftButton().willBe(Mouse.Button::pressed);
 
         text = text().setString("Fill me!").setHeight(20).setColor(Color.mix(1,1,1))
                 .setOrigin(XOrigin.CENTER, YOrigin.CENTER).setPosition(400, 300);
@@ -68,8 +64,6 @@ public class Note extends Brick<Host> {
         }, text.font(), text.width(), text.string(), text.height(), text.position(), text.xOrigin(), cursorPosition);
 
         cars = new NoteCars(this);
-        cars.head().let(cursorPosition);
-        cars.tail().let(cursorPosition);
     }
 
     @Override
@@ -77,6 +71,7 @@ public class Note extends Brick<Host> {
         super.update();
 
         if(isSelected()) {
+            boolean pressOccur = mousePress.occur();
             var mouse = mouse();
             if(mouse.leftButton().isPressed()) {
                 float x = switch (text.getXOrigin()) {
@@ -84,8 +79,13 @@ public class Note extends Brick<Host> {
                     case LEFT -> text.getPosition().getX();
                     case RIGHT -> text.getPosition().getX() - text.getWidth();
                 };
-                cursorPosition.set(order(FontManager.class).getFont(text.getFont())
-                        .getCarriagePosition(text.getString(), text.getHeight(), x, mouse().position().get().getX()));
+                int newCursorPos = order(FontManager.class).getFont(text.getFont())
+                        .getCursorPosition(text.getString(), text.getHeight(), x, mouse().position().get().getX());
+                cursorPosition.set(newCursorPos);
+                cars.headIndex.set(newCursorPos);
+                if(pressOccur) {
+                    cars.tailIndex.set(newCursorPos);
+                }
             }
 
             var keyboard = keyboard();
@@ -146,6 +146,34 @@ public class Note extends Brick<Host> {
                                     }
                                     cursorPosition.set(text.getString().length());
                                 }
+                                case NUM_0_INSERT -> {
+                                    String clip = clipboard().get();
+                                    int[] minMax;
+                                    if(cars.isAny()) {
+                                        minMax = cars.getMinMax();
+                                    } else {
+                                        minMax = new int[]{cursorPos, cursorPos};
+                                    }
+                                    String str = text.getString();
+                                    text.setString(str.substring(0, minMax[0]) +
+                                            clip +
+                                            str.substring(minMax[1]));
+                                    cursorPosition.set(cursorPos + clip.length());
+                                }
+                                case NUM_DECIMAL_DELETE -> {
+                                    String str = text.getString();
+                                    if(cars.isAny()) {
+                                        int[] minMax = cars.getMinMax();
+                                        text.setString(str.substring(0, minMax[0]) + str.substring(minMax[1]));
+                                        cursorPosition.set(minMax[0]);
+                                        cars.reset();
+                                    } else {
+                                        if (cursorPos < str.length()) {
+                                            String txt = text.getString();
+                                            text.setString(txt.substring(0, cursorPos) + txt.substring(cursorPos + 1));
+                                        }
+                                    }
+                                }
                             }
                         }
                         switch (e.key) {
@@ -161,6 +189,20 @@ public class Note extends Brick<Host> {
                                         cursorPosition.set(cursorPos - 1);
                                         String txt = text.getString();
                                         text.setString(txt.substring(0, cursorPos - 1) + txt.substring(cursorPos));
+                                    }
+                                }
+                            }
+                            case DELETE -> {
+                                String str = text.getString();
+                                if(cars.isAny()) {
+                                    int[] minMax = cars.getMinMax();
+                                    text.setString(str.substring(0, minMax[0]) + str.substring(minMax[1]));
+                                    cursorPosition.set(minMax[0]);
+                                    cars.reset();
+                                } else {
+                                    if (cursorPos < str.length()) {
+                                        String txt = text.getString();
+                                        text.setString(txt.substring(0, cursorPos) + txt.substring(cursorPos + 1));
                                     }
                                 }
                             }
@@ -186,17 +228,12 @@ public class Note extends Brick<Host> {
                                             }
                                         }
                                     } else {
-                                        if(cars.isAny()) {
-                                            if (cursorPos > 0) {
-                                                cars.headIndex.set(cursorPos - 1);
-                                                cursorPosition.set(cursorPos - 1);
-                                            }
-                                        } else {
+                                        if (!cars.isAny()) {
                                             cars.tailIndex.set(cursorPos);
-                                            if (cursorPos > 0) {
-                                                cars.headIndex.set(cursorPos - 1);
-                                                cursorPosition.set(cursorPos - 1);
-                                            }
+                                        }
+                                        if (cursorPos > 0) {
+                                            cars.headIndex.set(cursorPos - 1);
+                                            cursorPosition.set(cursorPos - 1);
                                         }
                                     }
                                 } else {
@@ -242,17 +279,12 @@ public class Note extends Brick<Host> {
                                             }
                                         }
                                     } else {
-                                        if(cars.isAny()) {
-                                            if (cursorPos < text.getString().length()) {
-                                                cursorPosition.set(cursorPos + 1);
-                                                cars.headIndex.set(cursorPos + 1);
-                                            }
-                                        } else {
+                                        if (!cars.isAny()) {
                                             cars.tailIndex.set(cursorPos);
-                                            if (cursorPos < text.getString().length()) {
-                                                cursorPosition.set(cursorPos + 1);
-                                                cars.headIndex.set(cursorPos + 1);
-                                            }
+                                        }
+                                        if (cursorPos < text.getString().length()) {
+                                            cursorPosition.set(cursorPos + 1);
+                                            cars.headIndex.set(cursorPos + 1);
                                         }
                                     }
                                 } else {
@@ -306,12 +338,173 @@ public class Note extends Brick<Host> {
                                 }
                                 cursorPosition.set(text.getString().length());
                             }
+                            case CAPS_LOCK -> {
+                                if(cars.isAny()) {
+                                    int[] minMax = cars.getMinMax();
+                                    String str = text.getString();
+                                    if(e.isCapsLocked()) {
+                                        text.setString(str.substring(0, minMax[0]) +
+                                                str.substring(minMax[0], minMax[1]).toUpperCase() +
+                                                str.substring(minMax[1]));
+                                    } else {
+                                        text.setString(str.substring(0, minMax[0]) +
+                                                str.substring(minMax[0], minMax[1]).toLowerCase() +
+                                                str.substring(minMax[1]));
+                                    }
+                                }
+                            }
+                            case INSERT -> {
+                                String clip = clipboard().get();
+                                int[] minMax;
+                                if(cars.isAny()) {
+                                    minMax = cars.getMinMax();
+                                } else {
+                                    minMax = new int[]{cursorPos, cursorPos};
+                                }
+                                String str = text.getString();
+                                text.setString(str.substring(0, minMax[0]) +
+                                        clip +
+                                        str.substring(minMax[1]));
+                                cursorPosition.set(cursorPos + clip.length());
+                            }
+                            case X -> {
+                                if(e.isControlled()) {
+                                    String cut = cut();
+                                    if(!cut.isEmpty()) clipboard().set(cut);
+                                }
+                            }
+                            case C -> {
+                                if(e.isControlled()) {
+                                    String copy = copy();
+                                    if(!copy.isEmpty()) {
+                                        clipboard().set(copy);
+                                    }
+                                }
+                            }
+                            case V -> {
+                                if(e.isControlled()) {
+                                    String clip = clipboard().get();
+                                    if(!clip.isEmpty()) {
+                                        paste(clip);
+                                        cars.reset();
+                                    }
+                                }
+                            }
+                            case Z -> {
+                                if(e.isControlled()) {
+                                    Story story = story();
+                                    if(e.isShifted()) {
+                                        story.front();
+                                    } else {
+                                        story.back();
+                                    }
+                                }
+                            }
+                            case A -> {
+                                if(e.isControlled()) {
+                                    cursorPosition.set(text.getString().length());
+                                    cars.headIndex.set(text.getString().length());
+                                    cars.tailIndex.set(0);
+                                }
+                            }
+                            case ESCAPE -> {
+                                if(cars.isAny()) {
+                                    cars.reset();
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    public void select(int begin, int length) {
+        if(begin >= 0 && length >= 0 && begin + length < text.getString().length()) {
+            cars.tailIndex.set(begin);
+            cars.headIndex.set(begin + length);
+        }
+    }
+
+    public String copy() {
+        if (cars.isAny()) {
+            int[] minMax = cars.getMinMax();
+            String str = text.getString();
+            return str.substring(minMax[0], minMax[1]);
+        }
+        return "";
+    }
+
+    public String cut() {
+        if(cars.isAny()) {
+            int[] minMax = cars.getMinMax();
+            String str = text.getString();
+            String cut = str.substring(minMax[0], minMax[1]);
+
+            UserAction ua = new UserAction() {
+
+                @Override
+                public void front() {
+                    String str = text.getString();
+                    text.setString(str.substring(0, minMax[0]) +
+                            str.substring(minMax[1]));
+                    cursorPosition.set(minMax[0]);
+                    cars.reset();
+                }
+
+                @Override
+                public void back() {
+                    String str = text.getString();
+                    text.setString(str.substring(0, minMax[0]) + cut +
+                            str.substring(minMax[0]));
+                    cursorPosition.set(minMax[0]);
+                    cars.headIndex.set(minMax[0]);
+                    cars.tailIndex.set(minMax[0] + cut.length());
+                }
+            };
+            ua.front();
+            story().push(ua);
+            return cut;
+        }
+        return "";
+    }
+
+    public void paste(String pasted) {
+        int[] minMax;
+        if(cars.isAny()) {
+            minMax = cars.getMinMax();
+        } else {
+            int cursorPos = cursorPosition.get();
+            minMax = new int[]{cursorPos, cursorPos};
+        }
+        String str = text.getString();
+        String replaced = str.substring(minMax[0], minMax[1]);
+
+        UserAction ua = new UserAction() {
+
+            @Override
+            public void front() {
+                String str = text.getString();
+                text.setString(str.substring(0, minMax[0]) + pasted +
+                        str.substring(minMax[1]));
+                cursorPosition.set(minMax[0] + pasted.length());
+                cars.headIndex.set(minMax[0] + pasted.length());
+                cars.tailIndex.set(minMax[0]);
+            }
+
+            @Override
+            public void back() {
+                String str = text.getString();
+                text.setString(str.substring(0, minMax[0]) + replaced +
+                        str.substring(minMax[0] + pasted.length()));
+                cursorPosition.set(minMax[0] + replaced.length());
+                cars.reset();
+            }
+        };
+        ua.front();
+        story().push(ua);
+    }
+
 
     private int ctrlJump(int cursorPos, boolean reverse) {
 
@@ -341,6 +534,14 @@ public class Note extends Brick<Host> {
             }
         }
         return jump;
+    }
+
+    void cursorLeft() {
+
+    }
+
+    void cursorRight() {
+
     }
 
 
@@ -399,17 +600,6 @@ public class Note extends Brick<Host> {
 
     public boolean isSelected() {
         return selected.get();
-    }
-
-    Var<Number> clicked;
-
-    public void click() {
-        clicked.set(System.currentTimeMillis());
-        selected.set(true);
-    }
-
-    public Var<Number> clicked() {
-        return clicked;
     }
 
     public Var<String> string() {
