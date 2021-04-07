@@ -11,6 +11,7 @@ import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.wall.Brick;
 
+
 public class Button extends Brick<Host> implements Rectangular {
 
     ColorRectangle rect;
@@ -33,11 +34,10 @@ public class Button extends Brick<Host> implements Rectangular {
     public Button(Host host) {
         super(host);
 
-
-        shown = Vars.set(false);
-        when(shown, this::_show, this::_hide);
-        selected = Vars.set(false);
-        when(selected, this::_select, this::_unselect);
+        shown = new AutoState<>(Vars.set(false), Vars.set(false));
+        when(shown.formal, this::show, this::hide);
+        selected = new AutoState<>(Vars.set(false), Vars.set(false));
+        when(selected.formal, this::select, this::unselect);
         clicked = Vars.get();
 
         rectColor = Vars.set(Color.mix(.15, .15, .25));
@@ -74,32 +74,41 @@ public class Button extends Brick<Host> implements Rectangular {
         }, false);
     }
 
-    Var<Boolean> shown;
-    protected void _show() {
-        pressingMonitor.use();
-        releasingMonitor.use();
-        show(rect);
-        show(contentRect);
-    }
+    AutoState<Boolean> shown;
 
-    protected void _hide() {
-        pressingMonitor.cancel();
-        releasingMonitor.cancel();
-        hide(rect);
-        hide(contentRect);
-    }
     @Override
     public void show() {
-        shown.set(true);
+        if(!shown.inner.get()) {
+            pressingMonitor.use();
+            releasingMonitor.use();
+            show(rect);
+            show(contentRect);
+            shown.inner.set(true);
+        }
     }
 
     @Override
     public void hide() {
-        shown.set(false);
+        if(shown.inner.get()) {
+            pressingMonitor.cancel();
+            releasingMonitor.cancel();
+            hide(rect);
+            hide(contentRect);
+            shown.inner.set(false);
+        }
     }
 
     public boolean isShown() {
         return shown.get();
+    }
+
+    public Var<Boolean> shown() {
+        return shown;
+    }
+
+    @Override
+    public void move() {
+
     }
 
     @Override
@@ -134,23 +143,28 @@ public class Button extends Brick<Host> implements Rectangular {
         }
     }
 
-    Var<Boolean> selected;
-    protected void _select() {
-        show(selectRect, rect);
+    @Override
+    public void stop() {
+
     }
 
-    protected void _unselect() {
-        hide(selectRect);
-    }
+    AutoState<Boolean> selected;
+
     public void select() {
-        selected.set(true);
+        if(!selected.inner.get()) {
+            show(selectRect, rect);
+            selected.inner.set(true);
+        }
     }
 
     public void unselect() {
-        selected.set(false);
+        if(selected.inner.get()) {
+            hide(selectRect);
+            selected.inner.set(false);
+        }
     }
 
-    public Source<Boolean> selected() {
+    public Var<Boolean> selected() {
         return selected;
     }
 
@@ -159,12 +173,11 @@ public class Button extends Brick<Host> implements Rectangular {
     }
 
     Var<Number> clicked;
-
     public void click() {
         clicked.set(System.currentTimeMillis());
     }
 
-    public Var<Number> clicked() {
+    public Source<Number> clicked() {
         return clicked;
     }
 
@@ -196,12 +209,12 @@ public class Button extends Brick<Host> implements Rectangular {
     }
 
     @Override
-    public Source<XOrigin> xOrigin() {
-        return () -> XOrigin.CENTER;
+    public Var<XOrigin> xOrigin() {
+        return rect.xOrigin();
     }
 
     @Override
-    public Source<YOrigin> yOrigin() {
-        return () -> YOrigin.CENTER;
+    public Var<YOrigin> yOrigin() {
+        return rect.yOrigin();
     }
 }

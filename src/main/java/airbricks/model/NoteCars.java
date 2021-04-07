@@ -10,9 +10,8 @@ import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
 import bricks.var.Var;
 import bricks.var.Vars;
-import bricks.wall.Brick;
 
-public class NoteCars extends Brick<Note> {
+public class NoteCars extends Airbrick<Note> {
 
     ColorRectangle body;
     Var<Integer> headIndex;
@@ -27,11 +26,11 @@ public class NoteCars extends Brick<Note> {
         tailIndex = Vars.set(0);
 
         body = rect().setXOrigin(XOrigin.LEFT);
-        body.height().let(host.at(n -> n.text.height()));
+        body.height().let(host.height());
         body.color().let(color);
-        body.yOrigin().let(host.at(n -> n.text.yOrigin()));
+        body.yOrigin().let(host.yOrigin());
         body.position().let(() -> {
-            ColorText text = getHost().text;
+            ColorText text = host.text;
             int begin = getMinIndex();
             BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getHeight());
             float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, begin), text.getHeight());
@@ -45,27 +44,36 @@ public class NoteCars extends Brick<Note> {
                 case RIGHT -> new Point(textPosition.getX() - text.getWidth() + xOffset,
                         textPosition.getY() + font.getScaledDescent() / 2);
             };
-        }, host, host.at(n -> n.text.font()), host.at(Note::string), host.at(Note::width),
-                host.at(n -> n.text.height()), host.at(n -> n.text.position()),
-                host.at(n -> n.text.xOrigin()), headIndex, tailIndex);
+        }, host.text.font(), host.string(), host.width(),
+                host.height(), host.position(),
+                host.xOrigin(), headIndex, tailIndex);
         body.width().let(() -> {
-            var text = getHost().text;
+            var text = host.text;
             int[] minMax = getMinMax();
             LoadedFont font = order(FontManager.class).getFont(text.getFont());
             String str = text.getString().substring(minMax[0], minMax[1]);
             return font.getStringWidth(str, text.getHeight());
-        }, host.at(n -> n.text.font()), host.at(Note::string), host.at(n -> n.text.height()),
-                headIndex, tailIndex);
+        }, host.text.font(), host.string(), host.height(), headIndex, tailIndex);
     }
 
     @Override
     public void show() {
-        show(body, getHost().text);
+        show(body, host.text);
     }
 
     @Override
     public void hide() {
         hide(body);
+    }
+
+    @Override
+    public void move() {
+
+    }
+
+    @Override
+    public void stop() {
+
     }
 
     public int[] getMinMax() {
