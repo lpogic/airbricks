@@ -22,7 +22,6 @@ public class Main extends Wall implements AirComposite {
 
         use(note);
         use(save);
-        note.selected().set(true);
     }
 
     @Override

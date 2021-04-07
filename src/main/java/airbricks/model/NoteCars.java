@@ -37,12 +37,12 @@ public class NoteCars extends Airbrick<Note> {
             Point textPosition = text.getPosition();
             XOrigin xOrigin = text.getXOrigin();
             return switch (xOrigin) {
-                case LEFT -> new Point(textPosition.getX() + xOffset,
-                        textPosition.getY() + font.getScaledDescent() / 2);
-                case CENTER -> new Point(textPosition.getX() - text.getWidth() / 2 + xOffset,
-                        textPosition.getY() + font.getScaledDescent() / 2);
-                case RIGHT -> new Point(textPosition.getX() - text.getWidth() + xOffset,
-                        textPosition.getY() + font.getScaledDescent() / 2);
+                case LEFT -> new Point(textPosition.x() + xOffset,
+                        textPosition.y() + font.getScaledDescent() / 2);
+                case CENTER -> new Point(textPosition.x() - text.getWidth() / 2 + xOffset,
+                        textPosition.y() + font.getScaledDescent() / 2);
+                case RIGHT -> new Point(textPosition.x() - text.getWidth() + xOffset,
+                        textPosition.y() + font.getScaledDescent() / 2);
             };
         }, host.text.font(), host.string(), host.width(),
                 host.height(), host.position(),

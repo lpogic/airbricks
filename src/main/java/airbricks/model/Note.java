@@ -54,12 +54,12 @@ public class Note extends Airbrick<Host> implements Rectangular {
            Point textPosition = text.getPosition();
            XOrigin xOrigin = text.getXOrigin();
            return switch (xOrigin) {
-               case LEFT -> new Point(textPosition.getX() + xOffset,
-                       textPosition.getY() + font.getScaledDescent() / 2);
-               case CENTER -> new Point(textPosition.getX() - text.getWidth() / 2 + xOffset,
-                       textPosition.getY() + font.getScaledDescent() / 2);
-               case RIGHT -> new Point(textPosition.getX() - text.getWidth() + xOffset,
-                       textPosition.getY() + font.getScaledDescent() / 2);
+               case LEFT -> new Point(textPosition.x() + xOffset,
+                       textPosition.y() + font.getScaledDescent() / 2);
+               case CENTER -> new Point(textPosition.x() - text.getWidth() / 2 + xOffset,
+                       textPosition.y() + font.getScaledDescent() / 2);
+               case RIGHT -> new Point(textPosition.x() - text.getWidth() + xOffset,
+                       textPosition.y() + font.getScaledDescent() / 2);
            };
         }, text.font(), text.width(), text.string(), text.height(), text.position(), text.xOrigin(), cursorPosition);
 
@@ -80,12 +80,12 @@ public class Note extends Airbrick<Host> implements Rectangular {
             var mouse = mouse();
             if(mouse.leftButton().isPressed()) {
                 float x = switch (text.getXOrigin()) {
-                    case CENTER -> text.getPosition().getX() - text.getWidth() / 2;
-                    case LEFT -> text.getPosition().getX();
-                    case RIGHT -> text.getPosition().getX() - text.getWidth();
+                    case CENTER -> text.getPosition().x() - text.getWidth() / 2;
+                    case LEFT -> text.getPosition().x();
+                    case RIGHT -> text.getPosition().x() - text.getWidth();
                 };
                 int newCursorPos = order(FontManager.class).getFont(text.getFont())
-                        .getCursorPosition(text.getString(), text.getHeight(), x, mouse().position().get().getX());
+                        .getCursorPosition(text.getString(), text.getHeight(), x, mouse().position().get().x());
                 cursorPosition.set(newCursorPos);
                 cars.headIndex.set(newCursorPos);
                 if(pressOccur) {
