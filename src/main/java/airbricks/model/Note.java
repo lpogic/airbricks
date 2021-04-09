@@ -25,6 +25,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
     final ColorRectangle cursor;
     final NoteCars cars;
     Var<Integer> cursorPosition;
+    Var<Boolean> editable;
 
     Impulse mousePress;
 
@@ -64,6 +65,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
         }, text.font(), text.width(), text.string(), text.height(), text.position(), text.xOrigin(), cursorPosition);
 
         cars = new NoteCars(this);
+        editable = Vars.set(true);
     }
 
     @Override
@@ -94,19 +96,21 @@ public class Note extends Airbrick<Host> implements Rectangular {
             }
 
             var keyboard = keyboard();
-            var charEvents = keyboard.getCharEvents();
-            if(charEvents.size() > 0) {
-                StringBuilder stringBuilder = new StringBuilder();
-                for (var che : keyboard.getCharEvents()) {
-                    stringBuilder.appendCodePoint(che.getCodepoint());
+            if(editable.get()) {
+                var charEvents = keyboard.getCharEvents();
+                if (charEvents.size() > 0) {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (var che : keyboard.getCharEvents()) {
+                        stringBuilder.appendCodePoint(che.getCodepoint());
+                    }
+                    String inset = stringBuilder.toString();
+                    cut();
+                    charInset(inset);
+                    String str = text.getString();
+                    int cursorPos = cursorPosition.get();
+                    text.setString(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
+                    cursorPosition.set(cursorPos + inset.length());
                 }
-                String inset = stringBuilder.toString();
-                cut();
-                charInset(inset);
-                String str = text.getString();
-                int cursorPos = cursorPosition.get();
-                text.setString(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
-                cursorPosition.set(cursorPos + inset.length());
             }
 
             var keyEvents = keyboard.getEvents();
@@ -147,6 +151,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                     cursorPosition.set(text.getString().length());
                                 }
                                 case NUM_0_INSERT -> {
+                                    if(!editable.get()) break;
                                     String clip = clipboard().get();
                                     int[] minMax;
                                     if(cars.isAny()) {
@@ -161,6 +166,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                     cursorPosition.set(cursorPos + clip.length());
                                 }
                                 case NUM_DECIMAL_DELETE -> {
+                                    if(!editable.get()) break;
                                     String cut = cut();
                                     if(cut.isEmpty()) {
                                         String str = text.getString();
@@ -174,6 +180,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                         }
                         switch (e.key) {
                             case BACKSPACE -> {
+                                if(!editable.get()) break;
                                 String cut = cut();
                                 if(cut.isEmpty()) {
                                     if (cursorPos > 0) {
@@ -186,6 +193,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 cars.reset();
                             }
                             case DELETE -> {
+                                if(!editable.get()) break;
                                 String cut = cut();
                                 if(cut.isEmpty()) {
                                     String str = text.getString();
@@ -328,11 +336,13 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 cursorPosition.set(text.getString().length());
                             }
                             case CAPS_LOCK -> {
+                                if(!editable.get()) break;
                                 if(cars.isAny()) {
                                     caps(e.isCapsLocked());
                                 }
                             }
                             case INSERT -> {
+                                if(!editable.get()) break;
                                 String clip = clipboard().get();
                                 if(!clip.isEmpty()) {
                                     paste(clip);
@@ -340,6 +350,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 }
                             }
                             case X -> {
+                                if(!editable.get()) break;
                                 if(e.isControlled() && !e.isAltered()) {
                                     String cut = cut();
                                     if(!cut.isEmpty()) clipboard().set(cut);
@@ -354,6 +365,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 }
                             }
                             case V -> {
+                                if(!editable.get()) break;
                                 if(e.isControlled() && !e.isAltered()) {
                                     String clip = clipboard().get();
                                     if(!clip.isEmpty()) {
@@ -363,6 +375,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 }
                             }
                             case Z -> {
+                                if(!editable.get()) break;
                                 if(e.isControlled() && !e.isAltered()) {
                                     Story story = story();
                                     pushOpenUserAction();
@@ -752,5 +765,15 @@ public class Note extends Airbrick<Host> implements Rectangular {
     @Override
     public Var<Number> height() {
         return text.height();
+    }
+
+    public Var<Boolean> editable() {
+        return editable;
+    }
+
+    public void fill(Rectangular rect) {
+        xOrigin().let(rect.xOrigin());
+        yOrigin().let(rect.yOrigin());
+        position().let(rect.position());
     }
 }

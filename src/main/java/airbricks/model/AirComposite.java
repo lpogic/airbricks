@@ -13,6 +13,7 @@ public interface AirComposite extends Composite {
     default Note note(String text) {
         var note = new Note(this);
         note.string().set(text);
+        note.editable().set(false);
         return note;
     }
     default Note note(String text, String placeholder) {
@@ -21,6 +22,7 @@ public interface AirComposite extends Composite {
         return note;
     }
     default NoteInput input(Note note) {
+        note.editable().set(true);
         return new NoteInput(this, input(), note);
     }
     default TextInput input(String string) {

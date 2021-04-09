@@ -46,6 +46,14 @@ public class NoteInput extends Airbrick<Host> implements Rectangular {
         super.update();
     }
 
+    public void fill(Rectangular rect) {
+        xOrigin().let(rect.xOrigin());
+        yOrigin().let(rect.yOrigin());
+        position().let(rect.position());
+        height().let(rect.height());
+        width().let(rect.width());
+    }
+
     @Override
     public Var<Point> position() {
         return button.position();

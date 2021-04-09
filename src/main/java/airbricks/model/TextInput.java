@@ -81,4 +81,12 @@ public class TextInput extends Airbrick<Host> implements Rectangular {
     public Source<Number> clicked() {
         return button.clicked();
     }
+
+    public void fill(Rectangular rect) {
+        xOrigin().let(rect.xOrigin());
+        yOrigin().let(rect.yOrigin());
+        position().let(rect.position());
+        height().let(rect.height());
+        width().let(rect.width());
+    }
 }

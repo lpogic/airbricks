@@ -94,6 +94,7 @@ public class Button extends Brick<Host> implements Rectangular {
             releasingMonitor.cancel();
             hide(rect);
             hide(contentRect);
+            hide(selectRect);
             shown.inner.set(false);
         }
     }
