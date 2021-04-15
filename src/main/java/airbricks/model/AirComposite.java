@@ -26,6 +26,8 @@ public interface AirComposite extends Composite {
         return new NoteInput(this, input(), note);
     }
     default TextInput input(String string) {
-        return new TextInput(this, input(), text().setString(string));
+        var text = text();
+        text.string().set(string);
+        return new TextInput(this, input(), text);
     }
 }

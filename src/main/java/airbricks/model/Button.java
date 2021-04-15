@@ -2,42 +2,50 @@ package airbricks.model;
 
 import bricks.*;
 import bricks.graphic.ColorRectangle;
-import bricks.graphic.Rectangular;
+import bricks.graphic.Rectangle;
 import bricks.input.Mouse;
 import bricks.monitor.Monitor;
 import bricks.trade.Host;
 import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.impulse.State;
+import bricks.var.special.Num;
 import bricks.wall.Brick;
 
 
-public class Button extends Brick<Host> implements Rectangular {
+public class Button extends Brick<Host> implements Rectangle {
 
-    ColorRectangle rect;
-    Var<Color> rectColor;
-    Var<Color> rectPressColor;
+    final Rectangle body;
+    final Num offset;
 
-    ColorRectangle contentRect;
-    Var<Color> contentRectColor;
-    Var<Color> contentRectPressColor;
+    final ColorRectangle rect;
+    final Var<Color> rectColor;
+    final Var<Color> rectPressColor;
 
-    ColorRectangle selectRect;
-    Var<Color> selectRectColor;
+    final ColorRectangle contentRect;
+    final Var<Color> contentRectColor;
+    final Var<Color> contentRectPressColor;
 
-    Var<Number> width;
-    Var<Number> height;
+    final ColorRectangle selectRect;
+    final Var<Color> selectRectColor;
 
-    Monitor pressingMonitor;
-    Monitor releasingMonitor;
+    final Monitor pressingMonitor;
+    final Monitor releasingMonitor;
 
     public Button(Host host) {
         super(host);
 
-        shown = new AutoState<>(Vars.set(false), Vars.set(false));
-        when(shown.formal, this::show, this::hide);
-        selected = new AutoState<>(Vars.set(false), Vars.set(false));
-        when(selected.formal, this::select, this::unselect);
+        shown = new State<>(false);
+        when(shown.signal(), () -> {
+            if(shown.getInput()) show();
+            else hide();
+        });
+        selected = new State<>(false);
+        when(selected.signal(), () -> {
+            if(selected.getInput()) select();
+            else unselect();
+        });
         clicked = Vars.get();
 
         rectColor = Vars.set(Color.mix(.15, .15, .25));
@@ -46,22 +54,22 @@ public class Button extends Brick<Host> implements Rectangular {
         contentRectPressColor = Vars.set(Color.mix(.2, .2, .4));
         selectRectColor = Vars.set(Color.mix(1, .8, .6));
 
-        width = Vars.set(200);
-        height = Vars.set(100);
+        body = new Centroid();
+        offset = Vars.num(0);
         rect = rect();
-        rect.color().set(rectColor.get());
+        rect.aim(body);
+        rect.adjust(body.margin(offset));
+        rect.color().let(rectColor);
 
         selectRect = rect();
-        selectRect.color().set(selectRectColor.get());
-        selectRect.width().let(rect.width().per(w -> w.floatValue() + 4));
-        selectRect.height().let(rect.height().per(h -> h.floatValue() + 4));
-        selectRect.position().let(rect.position());
+        selectRect.aim(rect);
+        selectRect.adjust(rect.margin(4));
+        selectRect.color().let(selectRectColor);
 
         contentRect = rect();
-        contentRect.position().let(rect.position());
-        contentRect.height().let(rect.height().per(h -> h.floatValue() - 20));
-        contentRect.width().let(rect.width().per(w -> w.floatValue() - 20));
-        contentRect.color().set(contentRectColor.get());
+        contentRect.aim(rect);
+        contentRect.adjust(rect.margin(-20));
+        contentRect.color().let(contentRectColor);
 
         pressingMonitor = when(mouse().leftButton().willBe(Mouse.Button::pressed)).then(()-> {
             selected.set(rect.contains(mouse().position()));
@@ -74,33 +82,29 @@ public class Button extends Brick<Host> implements Rectangular {
         }, false);
     }
 
-    AutoState<Boolean> shown;
+    State<Boolean> shown;
 
     @Override
     public void show() {
-        if(!shown.inner.get()) {
+        if(!shown.get()) {
             pressingMonitor.use();
             releasingMonitor.use();
             show(rect);
             show(contentRect);
-            shown.inner.set(true);
+            shown.setState(true);
         }
     }
 
     @Override
     public void hide() {
-        if(shown.inner.get()) {
+        if(shown.get()) {
             pressingMonitor.cancel();
             releasingMonitor.cancel();
             hide(rect);
             hide(contentRect);
             hide(selectRect);
-            shown.inner.set(false);
+            shown.setState(false);
         }
-    }
-
-    public boolean isShown() {
-        return shown.get();
     }
 
     public Var<Boolean> shown() {
@@ -116,28 +120,30 @@ public class Button extends Brick<Host> implements Rectangular {
     public void update() {
         super.update();
 
-        if(isShown()) {
+        if(shown.get()) {
             var mouse = mouse();
 
-            boolean mouseIn = rect.contains(mouse.position());
+            boolean mouseIn = body.contains(mouse.position());
             if (!mouseIn) {
-                rect.setWidth(width.get()).setHeight(height.get()).setColor(rectColor.get());
-                contentRect.setColor(contentRectColor.get());
+                offset.set(0);
+                rect.color().let(rectColor);
+                contentRect.color().let(contentRectColor);
             } else {
                 boolean leftButtonPressed = mouse.leftButton().isPressed();
                 if (!leftButtonPressed) {
-                    rect.setWidth(width.get().floatValue() + 8).setHeight(height.get().floatValue() + 8)
-                            .setColor(rectColor.get());
-                    contentRect.setColor(contentRectColor.get());
+                    offset.set(4);
+                    rect.color().let(rectColor);
+                    contentRect.color().let(contentRectColor);
                 } else {
                     boolean selected = this.selected.get();
                     if (selected) {
-                        rect.setWidth(width.get().floatValue() + 4).setHeight(height.get().floatValue() + 4)
-                                .setColor(rectPressColor.get());
-                        contentRect.setColor(contentRectPressColor.get());
+                        offset.set(4);
+                        rect.color().let(rectPressColor);
+                        contentRect.color().let(contentRectPressColor);
                     } else {
-                        rect.setWidth(width.get()).setHeight(height.get()).setColor(rectColor.get());
-                        contentRect.setColor(contentRectColor.get());
+                        offset.set(0);
+                        rect.color().let(rectColor);
+                        contentRect.color().let(contentRectColor);
                     }
                 }
             }
@@ -149,28 +155,24 @@ public class Button extends Brick<Host> implements Rectangular {
 
     }
 
-    AutoState<Boolean> selected;
+    State<Boolean> selected;
 
     public void select() {
-        if(!selected.inner.get()) {
+        if(!selected.get()) {
             show(selectRect, rect);
-            selected.inner.set(true);
+            selected.setState(true);
         }
     }
 
     public void unselect() {
-        if(selected.inner.get()) {
+        if(selected.get()) {
             hide(selectRect);
-            selected.inner.set(false);
+            selected.setState(false);
         }
     }
 
     public Var<Boolean> selected() {
         return selected;
-    }
-
-    public boolean isSelected() {
-        return selected.get();
     }
 
     Var<Number> clicked;
@@ -182,40 +184,37 @@ public class Button extends Brick<Host> implements Rectangular {
         return clicked;
     }
 
-    public Var<Number> width() {
-        return width;
-    }
-
-    public Button setWidth(Number width) {
-        this.width.set(width);
-        return this;
-    }
-
-    public Var<Number> height() {
-        return height;
-    }
-
-    public Var<Point> position() {
-        return rect.position();
-    }
-
-    public Button setPosition(Point position) {
-        rect.setPosition(position);
-        return this;
-    }
-
-    public Button setPosition(Number x, Number y) {
-        rect.setPosition(x, y);
-        return this;
-    }
-
     @Override
-    public Var<XOrigin> xOrigin() {
-        return rect.xOrigin();
+    public Num width() {
+        return body.width();
+    }
+    @Override
+    public Num height() {
+        return body.height();
+    }
+    @Override
+    public Num left() {
+        return body.left();
+    }
+    @Override
+    public Num right() {
+        return body.right();
+    }
+    @Override
+    public Num top() {
+        return body.top();
+    }
+    @Override
+    public Num bottom() {
+        return body.bottom();
+    }
+    @Override
+    public Num x() {
+        return body.x();
+    }
+    @Override
+    public Num y() {
+        return body.y();
     }
 
-    @Override
-    public Var<YOrigin> yOrigin() {
-        return rect.yOrigin();
-    }
 }

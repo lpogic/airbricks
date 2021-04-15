@@ -1,8 +1,6 @@
 package airbricks.model;
 
 import bricks.Color;
-import bricks.Point;
-import bricks.XOrigin;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
 import bricks.font.LoadedFont;
@@ -25,34 +23,27 @@ public class NoteCars extends Airbrick<Note> {
         headIndex = Vars.set(0);
         tailIndex = Vars.set(0);
 
-        body = rect().setXOrigin(XOrigin.LEFT);
+        body = rect();
         body.height().let(host.height());
         body.color().let(color);
-        body.yOrigin().let(host.yOrigin());
-        body.position().let(() -> {
-            ColorText text = host.text;
+        body.left().let(() -> {
             int begin = getMinIndex();
-            BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getHeight());
-            float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, begin), text.getHeight());
-            Point textPosition = text.getPosition();
-            XOrigin xOrigin = text.getXOrigin();
-            return switch (xOrigin) {
-                case LEFT -> new Point(textPosition.x() + xOffset,
-                        textPosition.y() + font.getScaledDescent() / 2);
-                case CENTER -> new Point(textPosition.x() - text.getWidth() / 2 + xOffset,
-                        textPosition.y() + font.getScaledDescent() / 2);
-                case RIGHT -> new Point(textPosition.x() - text.getWidth() + xOffset,
-                        textPosition.y() + font.getScaledDescent() / 2);
-            };
-        }, host.text.font(), host.string(), host.width(),
-                host.height(), host.position(),
-                host.xOrigin(), headIndex, tailIndex);
+            LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
+            float xOffset = font.getStringWidth(host.text.string().get().substring(0, begin), host.text.height().getFloat());
+            return host.text.left().getFloat() + xOffset;
+        }, host.height(), host.text.font(), host.left(), headIndex);
+
+        body.y().let(() -> {
+            ColorText text = host.text;
+            BackedFont font = order(FontManager.class).getFont(text.font().get(), text.height().getFloat());
+            return text.y().getFloat() + font.getScaledDescent() / 2;
+        });
+
         body.width().let(() -> {
-            var text = host.text;
             int[] minMax = getMinMax();
-            LoadedFont font = order(FontManager.class).getFont(text.getFont());
-            String str = text.getString().substring(minMax[0], minMax[1]);
-            return font.getStringWidth(str, text.getHeight());
+            LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
+            String str = host.text.string().get().substring(minMax[0], minMax[1]);
+            return font.getStringWidth(str, host.text.height().getFloat());
         }, host.text.font(), host.string(), host.height(), headIndex, tailIndex);
     }
 

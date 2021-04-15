@@ -1,51 +1,96 @@
 package airbricks.model;
 
-import bricks.Point;
-import bricks.XOrigin;
-import bricks.YOrigin;
-import bricks.graphic.Rectangular;
+import bricks.Coordinate;
+import bricks.Coordinated;
 import bricks.var.Source;
-import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.special.Num;
+import bricks.var.special.NumSource;
 import suite.suite.Subject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
-public class Table implements Rectangular {
+public class Table implements Tabular, Coordinate {
 
-    public static class Column {
-        Source<Number> width;
-        Source<Number> center;
+    public class Sector implements Tabular {
+        int l;
+        int r;
+        int t;
+        int b;
 
-        public Column(Source<Number> width) {
-            this.width = width;
+        public Sector(int left, int right, int top, int bottom) {
+            this.l = left;
+            this.r = right;
+            this.t = top;
+            this.b = bottom;
+        }
+
+        @Override
+        public Tabular sector(int column, int row) {
+            return Table.this.sector(l + column, t + row);
+        }
+
+        @Override
+        public Tabular sector(int left, int right, int top, int bottom) {
+            return Table.this.sector(l + left,
+                    l + right,
+                    t + top,
+                    t + bottom);
+        }
+
+        @Override
+        public NumSource x() {
+            return () -> (right().getFloat() + left().getFloat()) / 2;
+        }
+
+        @Override
+        public NumSource y() {
+            return () -> (bottom().getFloat() + top().getFloat()) / 2;
+        }
+
+        @Override
+        public NumSource width() {
+            return () -> right().getFloat() - left().getFloat();
+        }
+
+        @Override
+        public NumSource height() {
+            return () -> bottom().getFloat() - top().getFloat();
+        }
+
+        @Override
+        public NumSource left() {
+            return columns.get(l).left();
+        }
+
+        @Override
+        public NumSource right() {
+            return columns.get(r).right();
+        }
+
+        @Override
+        public NumSource top() {
+            return rows.get(t).top();
+        }
+
+        @Override
+        public NumSource bottom() {
+            return rows.get(b).bottom();
         }
     }
 
-    public static class Row {
-        Source<Number> height;
-        Source<Number> center;
-
-        public Row(Source<Number> height) {
-            this.height = height;
-        }
-    }
-
-    public static abstract class Cell implements Rectangular {
-    }
-
-    final Var<Point> position;
-    final Var<Number> width;
-    final Var<Number> height;
-    final Var<XOrigin> xOrigin;
-    final Var<YOrigin> yOrigin;
+    final Num left;
+    final Num top;
+    final Num width;
+    final Num height;
     List<Column> columns = new ArrayList<>();
     List<Row> rows = new ArrayList<>();
 
     public Table() {
 
-        width = Vars.let(() -> {
+        width = Vars.num(() -> {
             float acc = 0f;
             for (var c : columns) {
                 acc += c.width.get().floatValue();
@@ -53,7 +98,7 @@ public class Table implements Rectangular {
             return acc;
         });
 
-        height = Vars.let(() -> {
+        height = Vars.num(() -> {
             float acc = 0f;
             for (var r : rows) {
                 acc += r.height.get().floatValue();
@@ -61,41 +106,74 @@ public class Table implements Rectangular {
             return acc;
         });
 
-        position = Vars.set(Point.zero());
-        xOrigin = Vars.set(XOrigin.CENTER);
-        yOrigin = Vars.set(YOrigin.CENTER);
+        left = Vars.num(0);
+        top = Vars.num(0);
     }
 
-    public Cell getCell(int c, int r) {
-        return new Cell() {
-            final Column col = columns.get(c);
-            final Row row = rows.get(r);
+    @Override
+    public Tabular sector(int column, int row) {
+        return new Tabular() {
+            final Column c = columns.get(column);
+            final Row r = rows.get(row);
 
             @Override
-            public Source<Point> position() {
-                return () -> new Point(col.center.get(), row.center.get());
+            public Tabular sector(int column, int row) {
+                if(column != 0 || row != 0) throw new RuntimeException("Index out of range");
+                return this;
             }
 
             @Override
-            public Source<XOrigin> xOrigin() {
-                return () -> XOrigin.CENTER;
+            public Tabular sector(int left, int right, int top, int bottom) {
+                if(left < 0 || left > right || right > 0 ||
+                        top < 0 || top > bottom || bottom > 0) throw new RuntimeException();
+                return this;
             }
 
             @Override
-            public Source<YOrigin> yOrigin() {
-                return () -> YOrigin.CENTER;
+            public NumSource x() {
+                return c.x();
             }
 
             @Override
-            public Source<Number> width() {
-                return col.width;
+            public NumSource y() {
+                return r.y();
             }
 
             @Override
-            public Source<Number> height() {
-                return row.height;
+            public NumSource width() {
+                return c.width();
+            }
+
+            @Override
+            public NumSource height() {
+                return r.height();
+            }
+
+            @Override
+            public NumSource left() {
+                return c.left();
+            }
+
+            @Override
+            public NumSource right() {
+                return c.right();
+            }
+
+            @Override
+            public NumSource top() {
+                return r.top();
+            }
+
+            @Override
+            public NumSource bottom() {
+                return r.bottom();
             }
         };
+    }
+
+    @Override
+    public Sector sector(int left, int right, int top, int bottom) {
+        return new Sector(left, right, top, bottom);
     }
 
     public void addColumns(Subject $cols) {
@@ -111,20 +189,9 @@ public class Table implements Rectangular {
                 int size = columns.size();
                 if(size > 0) {
                     Column prev = columns.get(size - 1);
-                    col.center = Vars.let(() -> prev.center.get().floatValue() +
-                            prev.width.get().floatValue() / 2 +
-                            col.width.get().floatValue() / 2);
+                    col.left.let(prev.right());
                 } else {
-                    col.center = Vars.let(() -> switch (xOrigin.get()) {
-                        case LEFT -> position.get().x() +
-                                col.width.get().floatValue() / 2;
-                        case CENTER -> position.get().x() -
-                                width.get().floatValue() / 2 +
-                                col.width.get().floatValue() / 2;
-                        case RIGHT -> position.get().x() -
-                                width.get().floatValue() +
-                                col.width.get().floatValue() / 2;
-                    });
+                    col.left.let(left());
                 }
                 columns.add(col);
             }
@@ -144,43 +211,85 @@ public class Table implements Rectangular {
                 int size = rows.size();
                 if(size > 0) {
                     Row prev = rows.get(size - 1);
-                    row.center = Vars.let(() -> prev.center.get().floatValue() +
-                            prev.height.get().floatValue() / 2 +
-                            row.height.get().floatValue() / 2);
+                    row.top.let(prev.bottom());
                 } else {
-                    row.center = Vars.let(() -> switch (yOrigin.get()) {
-                        case TOP -> position.get().y() +
-                                row.height.get().floatValue() / 2;
-                        case CENTER -> position.get().y() -
-//                                height.get().floatValue() / 2 +
-                                row.height.get().floatValue() / 2;
-                        case BOTTOM -> position.get().y() -
-                                height.get().floatValue() +
-                                row.height.get().floatValue() / 2;
-                    });
+                    row.top.let(top());
                 }
                 rows.add(row);
             }
         }
     }
 
-    public Var<Point> position() {
-        return position;
+    @Override
+    public Num x() {
+        return new Num() {
+            @Override
+            public void let(Supplier<Number> s) {
+                left.let(() -> s.get().floatValue() - width.getFloat() / 2);
+            }
+
+            @Override
+            public Number get() {
+                return left.getFloat() + width.getFloat() / 2;
+            }
+        };
     }
 
-    public Source<Number> width() {
+    public Num y() {
+        return new Num() {
+            @Override
+            public void let(Supplier<Number> s) {
+                top.let(() -> s.get().floatValue() - height.getFloat() / 2);
+            }
+
+            @Override
+            public Number get() {
+                return top.getFloat() + height.getFloat() / 2;
+            }
+        };
+    }
+
+    public NumSource width() {
         return width;
     }
 
-    public Source<Number> height() {
+    public NumSource height() {
         return height;
     }
 
-    public Var<XOrigin> xOrigin() {
-        return xOrigin;
+    public Num left() {
+        return left;
     }
 
-    public Var<YOrigin> yOrigin() {
-        return yOrigin;
+    public Num right() {
+        return new Num() {
+            @Override
+            public void let(Supplier<Number> s) {
+                left.let(() -> s.get().floatValue() - width.getFloat());
+            }
+
+            @Override
+            public Number get() {
+                return left.getFloat() + width.getFloat();
+            }
+        };
+    }
+
+    public Num top() {
+        return top;
+    }
+
+    public Num bottom() {
+        return new Num() {
+            @Override
+            public void let(Supplier<Number> s) {
+                top.let(() -> s.get().floatValue() - height.getFloat());
+            }
+
+            @Override
+            public Number get() {
+                return top.getFloat() + height.getFloat();
+            }
+        };
     }
 }

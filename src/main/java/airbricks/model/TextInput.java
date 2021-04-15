@@ -1,15 +1,13 @@
 package airbricks.model;
 
-import bricks.Point;
-import bricks.XOrigin;
-import bricks.YOrigin;
 import bricks.graphic.ColorText;
-import bricks.graphic.Rectangular;
+import bricks.graphic.Rectangle;
 import bricks.trade.Host;
 import bricks.var.Source;
 import bricks.var.Var;
+import bricks.var.special.Num;
 
-public class TextInput extends Airbrick<Host> implements Rectangular {
+public class TextInput extends Airbrick<Host> implements Rectangle {
 
     public final ColorText text;
     public final Button button;
@@ -18,10 +16,8 @@ public class TextInput extends Airbrick<Host> implements Rectangular {
         super(host);
         this.button = button;
         this.text = text;
-        button.height().let(text.height().per(h -> h.floatValue() + 20));
-        button.width().let(text.width().per(w -> w.floatValue() + 40));
-
-        text.position().let(button.position());
+        button.adjust(text.margin(40, 20));
+        text.aim(button);
     }
 
     @Override
@@ -50,28 +46,36 @@ public class TextInput extends Airbrick<Host> implements Rectangular {
     }
 
     @Override
-    public Var<Point> position() {
-        return button.position();
+    public Num width() {
+        return button.width();
     }
-
     @Override
-    public Var<XOrigin> xOrigin() {
-        return button.xOrigin();
+    public Num height() {
+        return button.height();
     }
-
     @Override
-    public Var<YOrigin> yOrigin() {
-        return button.yOrigin();
+    public Num left() {
+        return button.left();
     }
-
     @Override
-    public Var<Number> width() {
-        return button.width;
+    public Num right() {
+        return button.right();
     }
-
     @Override
-    public Var<Number> height() {
-        return button.height;
+    public Num top() {
+        return button.top();
+    }
+    @Override
+    public Num bottom() {
+        return button.bottom();
+    }
+    @Override
+    public Num x() {
+        return button.x();
+    }
+    @Override
+    public Num y() {
+        return button.y();
     }
 
     public Var<String> string() {
@@ -80,13 +84,5 @@ public class TextInput extends Airbrick<Host> implements Rectangular {
 
     public Source<Number> clicked() {
         return button.clicked();
-    }
-
-    public void fill(Rectangular rect) {
-        xOrigin().let(rect.xOrigin());
-        yOrigin().let(rect.yOrigin());
-        position().let(rect.position());
-        height().let(rect.height());
-        width().let(rect.width());
     }
 }

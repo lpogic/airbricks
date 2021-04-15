@@ -1,24 +1,22 @@
 package airbricks.model;
 
-import bricks.Point;
-import bricks.XOrigin;
-import bricks.YOrigin;
-import bricks.graphic.Rectangular;
+import bricks.graphic.Rectangle;
 import bricks.trade.Host;
+import bricks.var.Source;
 import bricks.var.Var;
+import bricks.var.special.Num;
 
-public class NoteInput extends Airbrick<Host> implements Rectangular {
+public class NoteInput extends Airbrick<Host> implements Rectangle {
 
-    public final Note note;
-    public final Button button;
+    public Note note;
+    public Button button;
 
     public NoteInput(Host host, Button button, Note note) {
         super(host);
         this.note = note;
         this.button = button;
-        button.height().let(note.text().height().per(h -> h.floatValue() + 20));
-        button.width().let(note.text().width().per(w -> w.floatValue() + 20));
-        note.position().let(button.position());
+        button.adjust(note.margin(20));
+        note.aim(button);
         note.selected().let(button.selected());
     }
 
@@ -46,44 +44,44 @@ public class NoteInput extends Airbrick<Host> implements Rectangular {
         super.update();
     }
 
-    public void fill(Rectangular rect) {
-        xOrigin().let(rect.xOrigin());
-        yOrigin().let(rect.yOrigin());
-        position().let(rect.position());
-        height().let(rect.height());
-        width().let(rect.width());
-    }
-
-    @Override
-    public Var<Point> position() {
-        return button.position();
-    }
-
-    @Override
-    public Var<XOrigin> xOrigin() {
-        return button.xOrigin();
-    }
-
-    @Override
-    public Var<YOrigin> yOrigin() {
-        return button.yOrigin();
-    }
-
-    @Override
-    public Var<Number> width() {
-        return button.width;
-    }
-
-    @Override
-    public Var<Number> height() {
-        return button.height;
+    public Var<Boolean> selected() {
+        return button.selected();
     }
 
     public Var<String> string() {
         return note.string();
     }
 
-    public Var<Boolean> selected() {
-        return button.selected();
+    @Override
+    public Num width() {
+        return button.width();
+    }
+    @Override
+    public Num height() {
+        return button.height();
+    }
+    @Override
+    public Num left() {
+        return button.left();
+    }
+    @Override
+    public Num right() {
+        return button.right();
+    }
+    @Override
+    public Num top() {
+        return button.top();
+    }
+    @Override
+    public Num bottom() {
+        return button.bottom();
+    }
+    @Override
+    public Num x() {
+        return button.x();
+    }
+    @Override
+    public Num y() {
+        return button.y();
     }
 }

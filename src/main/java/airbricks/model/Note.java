@@ -1,11 +1,10 @@
 package airbricks.model;
 
 import bricks.Color;
-import bricks.Point;
-import bricks.XOrigin;
-import bricks.YOrigin;
+import bricks.Coordinated;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
+import bricks.font.LoadedFont;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
 import bricks.graphic.Rectangular;
@@ -13,10 +12,12 @@ import bricks.input.Mouse;
 import bricks.input.Story;
 import bricks.input.UserAction;
 import bricks.trade.Host;
-import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.var.impulse.Impulse;
+import bricks.var.impulse.State;
+import bricks.var.special.Num;
+import bricks.var.special.NumSource;
 import suite.suite.util.Cascade;
 
 public class Note extends Airbrick<Host> implements Rectangular {
@@ -24,45 +25,49 @@ public class Note extends Airbrick<Host> implements Rectangular {
     final ColorText text;
     final ColorRectangle cursor;
     final NoteCars cars;
-    Var<Integer> cursorPosition;
-    Var<Boolean> editable;
+    final Var<Integer> cursorPosition;
+    final Var<Boolean> editable;
 
-    Impulse mousePress;
+    final Impulse mousePress;
 
     public Note(Host host) {
         super(host);
 
-        selected = new AutoState<>(Vars.set(false), Vars.set(false));
-        when(selected.formal, this::select, this::unselect);
-        shown = new AutoState<>(Vars.set(false), Vars.set(false));
-        when(shown.formal, this::show, this::hide);
+        selected = new State<>(false);
+        when(selected.signal(), () -> {
+            if (selected.getInput()) select();
+            else unselect();
+        });
+        shown = new State<>(false);
+        when(shown.signal(), () -> {
+            if(shown.getInput()) show();
+            else hide();
+        });
 
         mousePress = mouse().leftButton().willBe(Mouse.Button::pressed);
 
-        text = text().setHeight(20).setColor(Color.mix(1,1,1))
-                .setOrigin(XOrigin.CENTER, YOrigin.CENTER).setPosition(400, 300);
+        text = text();
+        text.height().set(20);
+        text.color().set(Color.mix(1, 1, 1));
 
         cursorPosition = Vars.set(0);
 
-        cursor = rect().setWidth(1);
+        cursor = rect();
+        cursor.width().set(1);
         cursor.height().let(text.height());
         cursor.color().let(text.color());
-        cursor.yOrigin().let(text.yOrigin());
-        cursor.position().let(() -> {
-           int pos = cursorPosition.get();
-           BackedFont font = order(FontManager.class).getFont(text.getFont(), text.getHeight());
-           float xOffset = font.getLoadedFont().getStringWidth(text.getString().substring(0, pos), text.getHeight());
-           Point textPosition = text.getPosition();
-           XOrigin xOrigin = text.getXOrigin();
-           return switch (xOrigin) {
-               case LEFT -> new Point(textPosition.x() + xOffset,
-                       textPosition.y() + font.getScaledDescent() / 2);
-               case CENTER -> new Point(textPosition.x() - text.getWidth() / 2 + xOffset,
-                       textPosition.y() + font.getScaledDescent() / 2);
-               case RIGHT -> new Point(textPosition.x() - text.getWidth() + xOffset,
-                       textPosition.y() + font.getScaledDescent() / 2);
-           };
-        }, text.font(), text.width(), text.string(), text.height(), text.position(), text.xOrigin(), cursorPosition);
+        cursor.x().let(() -> {
+            int pos = cursorPosition.get();
+            LoadedFont font = order(FontManager.class).getFont(text.font().get());
+            float xOffset = font.getStringWidth(text.string().get().substring(0, pos), text.height().getFloat());
+            float l = text.left().getFloat();
+            return l + xOffset;
+        });
+        cursor.y().let(() -> {
+            BackedFont font = order(FontManager.class).getFont(text.font().get(), text.height().getFloat());
+            float y = text.y().getFloat();
+            return y + font.getScaledDescent() / 2;
+        });
 
         cars = new NoteCars(this);
         editable = Vars.set(true);
@@ -77,17 +82,14 @@ public class Note extends Airbrick<Host> implements Rectangular {
     public void update() {
         super.update();
 
-        if(isSelected()) {
+        if(selected.get()) {
             boolean pressOccur = mousePress.occur();
             var mouse = mouse();
             if(mouse.leftButton().isPressed()) {
-                float x = switch (text.getXOrigin()) {
-                    case CENTER -> text.getPosition().x() - text.getWidth() / 2;
-                    case LEFT -> text.getPosition().x();
-                    case RIGHT -> text.getPosition().x() - text.getWidth();
-                };
-                int newCursorPos = order(FontManager.class).getFont(text.getFont())
-                        .getCursorPosition(text.getString(), text.getHeight(), x, mouse().position().get().x());
+                float x = text.left().getFloat();
+                int newCursorPos = order(FontManager.class).getFont(text.font().get())
+                        .getCursorPosition(text.string().get(), text.height().getFloat(),
+                                x, mouse.position().x().getFloat());
                 cursorPosition.set(newCursorPos);
                 cars.headIndex.set(newCursorPos);
                 if(pressOccur) {
@@ -106,9 +108,9 @@ public class Note extends Airbrick<Host> implements Rectangular {
                     String inset = stringBuilder.toString();
                     cut();
                     charInset(inset);
-                    String str = text.getString();
+                    String str = text.string().get();
                     int cursorPos = cursorPosition.get();
-                    text.setString(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
+                    text.string().set(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
                     cursorPosition.set(cursorPos + inset.length());
                 }
             }
@@ -138,17 +140,17 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 case NUM_1_END -> {
                                     if(cars.isAny()) {
                                         if(e.isShifted()) {
-                                            cars.headIndex.set(text.getString().length());
+                                            cars.headIndex.set(text.string().get().length());
                                         } else {
                                             cars.reset();
                                         }
                                     } else {
                                         if(e.isShifted()) {
                                             cars.tailIndex.set(cursorPos);
-                                            cars.headIndex.set(text.getString().length());
+                                            cars.headIndex.set(text.string().get().length());
                                         }
                                     }
-                                    cursorPosition.set(text.getString().length());
+                                    cursorPosition.set(text.string().get().length());
                                 }
                                 case NUM_0_INSERT -> {
                                     if(!editable.get()) break;
@@ -159,8 +161,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                     } else {
                                         minMax = new int[]{cursorPos, cursorPos};
                                     }
-                                    String str = text.getString();
-                                    text.setString(str.substring(0, minMax[0]) +
+                                    String str = text.string().get();
+                                    text.string().set(str.substring(0, minMax[0]) +
                                             clip +
                                             str.substring(minMax[1]));
                                     cursorPosition.set(cursorPos + clip.length());
@@ -169,10 +171,10 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                     if(!editable.get()) break;
                                     String cut = cut();
                                     if(cut.isEmpty()) {
-                                        String str = text.getString();
+                                        String str = text.string().get();
                                         if (cursorPos < str.length()) {
                                             charErase(false);
-                                            text.setString(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
+                                            text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
                                         }
                                     }
                                 }
@@ -185,8 +187,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 if(cut.isEmpty()) {
                                     if (cursorPos > 0) {
                                         charErase(true);
-                                        String str = text.getString();
-                                        text.setString(str.substring(0, cursorPos - 1) + str.substring(cursorPos));
+                                        String str = text.string().get();
+                                        text.string().set(str.substring(0, cursorPos - 1) + str.substring(cursorPos));
                                         cursorPosition.set(cursorPos - 1);
                                     }
                                 }
@@ -196,10 +198,10 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 if(!editable.get()) break;
                                 String cut = cut();
                                 if(cut.isEmpty()) {
-                                    String str = text.getString();
+                                    String str = text.string().get();
                                     if (cursorPos < str.length()) {
                                         charErase(false);
-                                        text.setString(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
+                                        text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
                                     }
                                 }
                             }
@@ -266,7 +268,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                                 cars.headIndex.set(tail);
                                             }
                                         } else {
-                                            if (cursorPos < text.getString().length()) {
+                                            if (cursorPos < text.string().get().length()) {
                                                 int jump = ctrlJump(cursorPos, false);
                                                 if(!cars.isAny()) {
                                                     cars.tailIndex.set(cursorPos);
@@ -279,14 +281,14 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                         if (!cars.isAny()) {
                                             cars.tailIndex.set(cursorPos);
                                         }
-                                        if (cursorPos < text.getString().length()) {
+                                        if (cursorPos < text.string().get().length()) {
                                             cursorPosition.set(cursorPos + 1);
                                             cars.headIndex.set(cursorPos + 1);
                                         }
                                     }
                                 } else {
                                     if(e.isControlled()) {
-                                        if (cursorPos < text.getString().length()) {
+                                        if (cursorPos < text.string().get().length()) {
                                             if (cars.isAny()) {
                                                 cars.reset();
                                             }
@@ -298,7 +300,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                             cursorPosition.set(cars.getMaxIndex());
                                             cars.reset();
                                         } else {
-                                            if (cursorPos < text.getString().length()) {
+                                            if (cursorPos < text.string().get().length()) {
                                                 cursorPosition.set(cursorPos + 1);
                                             }
                                         }
@@ -323,17 +325,17 @@ public class Note extends Airbrick<Host> implements Rectangular {
                             case END -> {
                                 if(cars.isAny()) {
                                     if(e.isShifted()) {
-                                        cars.headIndex.set(text.getString().length());
+                                        cars.headIndex.set(text.string().get().length());
                                     } else {
                                         cars.reset();
                                     }
                                 } else {
                                     if(e.isShifted()) {
                                         cars.tailIndex.set(cursorPos);
-                                        cars.headIndex.set(text.getString().length());
+                                        cars.headIndex.set(text.string().get().length());
                                     }
                                 }
-                                cursorPosition.set(text.getString().length());
+                                cursorPosition.set(text.string().get().length());
                             }
                             case CAPS_LOCK -> {
                                 if(!editable.get()) break;
@@ -388,8 +390,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
                             }
                             case A -> {
                                 if(e.isControlled() && !e.isAltered()) {
-                                    cursorPosition.set(text.getString().length());
-                                    cars.headIndex.set(text.getString().length());
+                                    cursorPosition.set(text.string().get().length());
+                                    cars.headIndex.set(text.string().get().length());
                                     cars.tailIndex.set(0);
                                 }
                             }
@@ -411,7 +413,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
     }
 
     public void select(int begin, int length) {
-        if(begin >= 0 && length >= 0 && begin + length < text.getString().length()) {
+        if(begin >= 0 && length >= 0 && begin + length < text.string().get().length()) {
             cars.tailIndex.set(begin);
             cars.headIndex.set(begin + length);
         }
@@ -420,7 +422,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
     public String copy() {
         if (cars.isAny()) {
             int[] minMax = cars.getMinMax();
-            String str = text.getString();
+            String str = text.string().get();
             return str.substring(minMax[0], minMax[1]);
         }
         return "";
@@ -429,7 +431,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
     public String cut() {
         if(cars.isAny()) {
             int[] minMax = cars.getMinMax();
-            String str = text.getString();
+            String str = text.string().get();
             String cut = str.substring(minMax[0], minMax[1]);
             int cursorBegin = minMax[0];
 
@@ -437,8 +439,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
                 @Override
                 public void front() {
-                    String str = text.getString();
-                    text.setString(str.substring(0, cursorBegin) +
+                    String str = text.string().get();
+                    text.string().set(str.substring(0, cursorBegin) +
                             str.substring(cursorBegin + cut.length()));
                     cursorPosition.set(cursorBegin);
                     cars.reset();
@@ -446,8 +448,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
                 @Override
                 public void back() {
-                    String str = text.getString();
-                    text.setString(str.substring(0, cursorBegin) + cut +
+                    String str = text.string().get();
+                    text.string().set(str.substring(0, cursorBegin) + cut +
                             str.substring(cursorBegin));
                     cursorPosition.set(cursorBegin);
                     cars.headIndex.set(cursorBegin);
@@ -470,15 +472,15 @@ public class Note extends Airbrick<Host> implements Rectangular {
             int cursorPos = cursorPosition.get();
             minMax = new int[]{cursorPos, cursorPos};
         }
-        String str = text.getString();
+        String str = text.string().get();
         String replaced = str.substring(minMax[0], minMax[1]);
 
         UserAction ua = new UserAction() {
 
             @Override
             public void front() {
-                String str = text.getString();
-                text.setString(str.substring(0, minMax[0]) + pasted +
+                String str = text.string().get();
+                text.string().set(str.substring(0, minMax[0]) + pasted +
                         str.substring(minMax[1]));
                 cursorPosition.set(minMax[0] + pasted.length());
                 cars.headIndex.set(minMax[0] + pasted.length());
@@ -487,8 +489,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
             @Override
             public void back() {
-                String str = text.getString();
-                text.setString(str.substring(0, minMax[0]) + replaced +
+                String str = text.string().get();
+                text.string().set(str.substring(0, minMax[0]) + replaced +
                         str.substring(minMax[0] + pasted.length()));
                 cursorPosition.set(minMax[0] + replaced.length());
                 cars.reset();
@@ -501,7 +503,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
     public void caps(boolean upper) {
         int[] minMax = cars.getMinMax();
-        String str = text.getString();
+        String str = text.string().get();
         String capsed = str.substring(minMax[0], minMax[1]);
         int cursorBegin = minMax[0];
 
@@ -509,9 +511,9 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
             @Override
             public void front() {
-                String str = text.getString();
+                String str = text.string().get();
                 int cursorEnd = cursorBegin + capsed.length();
-                text.setString(str.substring(0, cursorBegin) +
+                text.string().set(str.substring(0, cursorBegin) +
                         (upper ? capsed.toUpperCase() : capsed.toLowerCase()) +
                         str.substring(cursorEnd));
                 cursorPosition.set(cursorEnd);
@@ -521,9 +523,9 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
             @Override
             public void back() {
-                String str = text.getString();
+                String str = text.string().get();
                 int cursorEnd = cursorBegin + capsed.length();
-                text.setString(str.substring(0, cursorBegin) +
+                text.string().set(str.substring(0, cursorBegin) +
                         capsed +
                         str.substring(cursorEnd));
                 cursorPosition.set(cursorEnd);
@@ -551,16 +553,16 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
         @Override
         public void front() {
-            String str = text.getString();
-            text.setString(str.substring(0, cursorBegin) + inset + str.substring(cursorBegin));
+            String str = text.string().get();
+            text.string().set(str.substring(0, cursorBegin) + inset + str.substring(cursorBegin));
             cursorPosition.set(cursorBegin + inset.length());
             cars.reset();
         }
 
         @Override
         public void back() {
-            String str = text.getString();
-            text.setString(str.substring(0, cursorBegin) + str.substring(cursorBegin + inset.length()));
+            String str = text.string().get();
+            text.string().set(str.substring(0, cursorBegin) + str.substring(cursorBegin + inset.length()));
             cursorPosition.set(cursorBegin);
             cars.reset();
         }
@@ -598,16 +600,16 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
         @Override
         public void front() {
-            String str = text.getString();
-            text.setString(str.substring(0, cursorBegin) + str.substring(cursorBegin + outset.length()));
+            String str = text.string().get();
+            text.string().set(str.substring(0, cursorBegin) + str.substring(cursorBegin + outset.length()));
             cursorPosition.set(cursorBegin);
             cars.reset();
         }
 
         @Override
         public void back() {
-            String str = text.getString();
-            text.setString(str.substring(0, cursorBegin) + outset + str.substring(cursorBegin));
+            String str = text.string().get();
+            text.string().set(str.substring(0, cursorBegin) + outset + str.substring(cursorBegin));
             cursorPosition.set(cursorBegin + outset.length());
             cars.reset();
 
@@ -621,25 +623,25 @@ public class Note extends Airbrick<Host> implements Rectangular {
             pushOpenUserAction();
             if(backspace) {
                 charErase.cursorBegin = cursorPos - 1;
-                charErase.outset = text.getString().substring(cursorPos - 1, cursorPos);
+                charErase.outset = text.string().get().substring(cursorPos - 1, cursorPos);
             } else {
                 charErase.cursorBegin = cursorPos;
-                charErase.outset = text.getString().substring(cursorPos, cursorPos + 1);
+                charErase.outset = text.string().get().substring(cursorPos, cursorPos + 1);
             }
         } else {
             if(charErase.cursorBegin != cursorPos) {
                 story().push(charErase);
                 if(backspace) {
-                    charErase = new CharEraseUserAction(cursorPos - 1, text.getString().substring(cursorPos - 1, cursorPos));
+                    charErase = new CharEraseUserAction(cursorPos - 1, text.string().get().substring(cursorPos - 1, cursorPos));
                 } else {
-                    charErase = new CharEraseUserAction(cursorPos, text.getString().substring(cursorPos, cursorPos + 1));
+                    charErase = new CharEraseUserAction(cursorPos, text.string().get().substring(cursorPos, cursorPos + 1));
                 }
             } else {
                 if(backspace) {
-                    charErase.outset = text.getString().charAt(cursorPos - 1) + charErase.outset;
+                    charErase.outset = text.string().get().charAt(cursorPos - 1) + charErase.outset;
                     --charErase.cursorBegin;
                 } else {
-                    charErase.outset += text.getString().charAt(cursorPos);
+                    charErase.outset += text.string().get().charAt(cursorPos);
                 }
             }
         }
@@ -649,10 +651,10 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
         Cascade<Integer> cps;
         if(reverse) {
-            StringBuilder str = new StringBuilder(text.getString().substring(0, cursorPos));
+            StringBuilder str = new StringBuilder(text.string().get().substring(0, cursorPos));
             cps = new Cascade<>(str.reverse().codePoints().iterator());
         } else {
-            cps = new Cascade<>(text.getString().substring(cursorPos)
+            cps = new Cascade<>(text.string().get().substring(cursorPos)
                     .codePoints().iterator());
         }
         int jump = 1;
@@ -681,49 +683,44 @@ public class Note extends Airbrick<Host> implements Rectangular {
         }
     }
 
-    AutoState<Boolean> shown;
+    State<Boolean> shown;
 
     @Override
     public void show() {
-        if(!shown.inner.get()) {
+        if(!shown.get()) {
             show(text);
-            shown.inner.set(true);
+            shown.setState(true);
         }
     }
 
     @Override
     public void hide() {
-        if (shown.inner.get()) {
+        if (shown.get()) {
             hide(text);
             selected.set(false);
-            shown.inner.set(false);
+            shown.setState(false);
         }
-    }
-
-    public boolean isShown() {
-        return shown.get();
     }
 
     public Var<Boolean> shown() {
         return shown;
     }
 
-
-    AutoState<Boolean> selected;
+    State<Boolean> selected;
 
     public void select() {
-        if(!selected.inner.get()) {
+        if(!selected.get()) {
             use(cursor);
             use(cars, text);
-            selected.inner.set(true);
+            selected.setState(true);
         }
     }
 
     public void unselect() {
-        if(selected.inner.get()) {
+        if(selected.getState()) {
             cancel(cursor);
             cancel(cars);
-            selected.inner.set(false);
+            selected.setState(false);
         }
     }
 
@@ -731,49 +728,46 @@ public class Note extends Airbrick<Host> implements Rectangular {
         return selected;
     }
 
-    public boolean isSelected() {
-        return selected.get();
-    }
-
     public Var<String> string() {
         return text.string();
-    }
-
-    public float getWidth() {
-        return text.getWidth();
-    }
-
-    public Source<Number> width() {
-        return text.width();
-    }
-
-    @Override
-    public Var<Point> position() {
-        return text.position();
-    }
-
-    @Override
-    public Var<XOrigin> xOrigin() {
-        return text.xOrigin();
-    }
-
-    @Override
-    public Var<YOrigin> yOrigin() {
-        return text.yOrigin();
-    }
-
-    @Override
-    public Var<Number> height() {
-        return text.height();
     }
 
     public Var<Boolean> editable() {
         return editable;
     }
 
-    public void fill(Rectangular rect) {
-        xOrigin().let(rect.xOrigin());
-        yOrigin().let(rect.yOrigin());
-        position().let(rect.position());
+    public Num height() {
+        return text.height();
+    }
+    public NumSource width() {
+        return text.width();
+    }
+
+    public Num left() {
+        return text.left();
+    }
+
+    public Num right() {
+        return text.right();
+    }
+
+    public Num top() {
+        return text.top();
+    }
+
+    public Num bottom() {
+        return text.bottom();
+    }
+
+    public Num x() {
+        return text.x();
+    }
+
+    public Num y() {
+        return text.y();
+    }
+
+    public void aim(Coordinated coordinated) {
+        text.aim(coordinated);
     }
 }

@@ -11,17 +11,16 @@ public class NoteWithPlaceholder extends Note {
     public NoteWithPlaceholder(Host host, String placeholderString) {
         super(host);
 
-        placeholder = text().setString(placeholderString);
+        placeholder = text();
+        placeholder.string().set(placeholderString);
         placeholder.color().set(Color.mix(0.5, 0.5, 0.5));
-        placeholder.position().let(position());
+        placeholder.aim(this);
         placeholder.height().let(height());
-        placeholder.xOrigin().let(xOrigin());
-        placeholder.yOrigin().let(yOrigin());
-        when(shown, () -> {
-            if(text.getString().isEmpty()) show(placeholder);
+        when(shown(), () -> {
+            if(text.string().get().isEmpty()) show(placeholder);
         }, () -> hide(placeholder));
-        when(selected, () -> hide(placeholder), () -> {
-            if(text.getString().isEmpty()) show(placeholder);
+        when(selected(), () -> hide(placeholder), () -> {
+            if(text.string().get().isEmpty()) show(placeholder);
         });
     }
 }
