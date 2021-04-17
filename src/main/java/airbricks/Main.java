@@ -4,7 +4,7 @@ import airbricks.model.AirComposite;
 import brackettree.reader.BracketTree;
 import bricks.wall.Wall;
 
-import static suite.suite.$uite.$;
+import static suite.suite.$uite.arm$;
 
 public class Main extends Wall implements AirComposite {
 
@@ -30,6 +30,6 @@ public class Main extends Wall implements AirComposite {
     }
 
     public static void main(String[] args) {
-        Wall.play($(Wall.class, Main.class));
+        Wall.play(arm$(Wall.class, Main.class));
     }
 }
