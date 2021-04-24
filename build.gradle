@@ -6,15 +6,8 @@ plugins {
 group 'lpo'
 version '1.0-SNAPSHOT'
 
-plugins.withType(JavaPlugin).configureEach {
-    java {
-        modularity.inferModulePath = true
-    }
-}
-
 application {
     mainClassName = 'airbricks.Main'
-//    mainModule.set('airbricks')
 }
 
 repositories {

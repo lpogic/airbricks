@@ -9,6 +9,7 @@ import bricks.trade.Host;
 import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.impulse.Edge;
 import bricks.var.impulse.State;
 import bricks.var.special.Num;
 import bricks.wall.Brick;
@@ -71,11 +72,11 @@ public class Button extends Brick<Host> implements Rectangle {
         contentRect.adjust(rect.margin(-20));
         contentRect.color().let(contentRectColor);
 
-        pressingMonitor = when(mouse().leftButton().willBe(Mouse.Button::pressed)).then(()-> {
+        pressingMonitor = when(mouse().leftButton().willBe(Edge::rising)).then(()-> {
             selected.set(rect.contains(mouse().position()));
         }, false);
 
-        releasingMonitor = when(mouse().leftButton().willBe(Mouse.Button::released)).then(()-> {
+        releasingMonitor = when(mouse().leftButton().willBe(Edge::rising)).then(()-> {
             if(rect.contains(mouse().position()) && selected.get()) {
                 click();
             }
@@ -129,7 +130,7 @@ public class Button extends Brick<Host> implements Rectangle {
                 rect.color().let(rectColor);
                 contentRect.color().let(contentRectColor);
             } else {
-                boolean leftButtonPressed = mouse.leftButton().isPressed();
+                boolean leftButtonPressed = mouse.leftButton().get();
                 if (!leftButtonPressed) {
                     offset.set(4);
                     rect.color().let(rectColor);

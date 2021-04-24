@@ -12,7 +12,7 @@ public class Main extends Wall implements AirComposite {
     protected void setup() {
         var note = input(note(BracketTree.read("dane.tree").asString(""), "Wpisz tu co"));
         note.width().let(width());
-        note.aim(center());
+        note.aim(this);
 
         var save = input("Zapisz");
         save.x().let(() -> width().getFloat() / 2);

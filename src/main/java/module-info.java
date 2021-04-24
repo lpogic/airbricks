@@ -6,4 +6,6 @@ open module airbricks {
     requires brackettree;
     requires suite.main;
     requires bricks;
+
+    exports airbricks.model;
 }

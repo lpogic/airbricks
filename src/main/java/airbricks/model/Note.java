@@ -14,6 +14,7 @@ import bricks.input.UserAction;
 import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.impulse.Edge;
 import bricks.var.impulse.Impulse;
 import bricks.var.impulse.State;
 import bricks.var.special.Num;
@@ -44,7 +45,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
             else hide();
         });
 
-        mousePress = mouse().leftButton().willBe(Mouse.Button::pressed);
+        mousePress = mouse().leftButton().willBe(Edge::rising);
 
         text = text();
         text.height().set(20);
@@ -85,7 +86,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
         if(selected.get()) {
             boolean pressOccur = mousePress.occur();
             var mouse = mouse();
-            if(mouse.leftButton().isPressed()) {
+            if(mouse.leftButton().get()) {
                 float x = text.left().getFloat();
                 int newCursorPos = order(FontManager.class).getFont(text.font().get())
                         .getCursorPosition(text.string().get(), text.height().getFloat(),
