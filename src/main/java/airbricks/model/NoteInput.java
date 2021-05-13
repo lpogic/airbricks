@@ -1,87 +1,94 @@
 package airbricks.model;
 
+import bricks.Sized;
 import bricks.graphic.Rectangle;
+import bricks.input.Keyboard;
+import bricks.input.Mouse;
+import bricks.input.Story;
 import bricks.trade.Host;
-import bricks.var.Source;
 import bricks.var.Var;
-import bricks.var.special.Num;
+import suite.suite.Subject;
 
-public class NoteInput extends Airbrick<Host> implements Rectangle {
+import static suite.suite.$.set$;
 
-    public Note note;
-    public Button button;
+public class NoteInput extends InputBase implements Rectangle, Selectable {
 
-    public NoteInput(Host host, Button button, Note note) {
+    protected Note note;
+
+    private final Story story;
+
+    public NoteInput(Host host) {
         super(host);
-        this.note = note;
-        this.button = button;
-        button.adjust(note.margin(20));
-        note.aim(button);
-        note.selected().let(button.selected());
-    }
+        note = new Note(this);
+        adjust(Sized.relative(note, 20));
+        note.aim(this);
+        when(selected(), () -> {
+            note.select();
+            note.updateCursorPosition(true);
+        }, note::unselect);
 
-    public void show() {
-        show(button);
-        show(note);
-    }
-
-    public void hide() {
-        hide(button);
-        hide(note);
-    }
-
-    public void move() {
-        move(button);
-        move(note);
-    }
-
-    public void stop() {
-        stop(button);
-        stop(note);
+        story = new Story(10);
+        $bricks.set(note);
     }
 
     public void update() {
+
+        var mouse = mouse();
+        boolean mouseIn = hasMouse.get();
+        boolean leftButton = mouse.leftButton().isPressed();
+        boolean leftButtonPressEvent = false;
+        var mEvents = mouse.getEvents();
+        for(var e : mEvents.eachAs(Mouse.ButtonEvent.class)) {
+            switch (e.button) {
+                case LEFT -> {
+                    if(e.isPress()) {
+                        leftButtonPressEvent = true;
+                    }
+                }
+            }
+        }
+
+        if (selected().get()) {
+            var keyboard = keyboard();
+            boolean tabPressEvent = false;
+            var kEvents = keyboard.getEvents();
+            for(var e : kEvents.eachAs(Keyboard.KeyEvent.class)) {
+                switch (e.key) {
+                    case TAB -> {
+                        if(e.isHold()) {
+                            kEvents.unset(e);
+                            if(e.isShifted()) {
+                                order(set$("selectPrev", this));
+                            } else {
+                                order(set$("selectNext", this));
+                            }
+                            tabPressEvent = true;
+                        }
+                    }
+                }
+            }
+            highlight(false);
+            select(!(tabPressEvent || (!mouseIn && leftButtonPressEvent)));
+        } else {
+            highlight(mouseIn && !leftButton);
+            select(leftButtonPressEvent && mouseIn);
+        }
+
         super.update();
     }
 
-    public Var<Boolean> selected() {
-        return button.selected();
+    public Subject order(Subject $) {
+        if(Story.class.equals($.raw())) {
+            return set$(story);
+        }
+        return super.order($);
     }
 
     public Var<String> string() {
         return note.string();
     }
 
-    @Override
-    public Num width() {
-        return button.width();
-    }
-    @Override
-    public Num height() {
-        return button.height();
-    }
-    @Override
-    public Num left() {
-        return button.left();
-    }
-    @Override
-    public Num right() {
-        return button.right();
-    }
-    @Override
-    public Num top() {
-        return button.top();
-    }
-    @Override
-    public Num bottom() {
-        return button.bottom();
-    }
-    @Override
-    public Num x() {
-        return button.x();
-    }
-    @Override
-    public Num y() {
-        return button.y();
+    public Var<Boolean> editable() {
+        return note.editable();
     }
 }

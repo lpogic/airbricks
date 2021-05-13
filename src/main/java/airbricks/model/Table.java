@@ -7,6 +7,7 @@ import bricks.var.Vars;
 import bricks.var.special.Num;
 import bricks.var.special.NumSource;
 import suite.suite.Subject;
+import suite.suite.Suite;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -177,7 +178,9 @@ public class Table implements Tabular, Coordinate {
     }
 
     public void addColumns(Subject $cols) {
-        for(var $ : $cols.eachIn()) {
+        for(var $ : $cols) {
+            if($.is(Suite.Auto.class)) $ = $.at();
+
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));
             } else if($.is(Number.class)) {
@@ -198,8 +201,14 @@ public class Table implements Tabular, Coordinate {
         }
     }
 
+    public int columnsSize() {
+        return columns.size();
+    }
+
     public void addRows(Subject $rows) {
-        for(var $ : $rows.eachIn()) {
+        for(var $ : $rows) {
+            if($.is(Suite.Auto.class)) $ = $.at();
+
             if($.is(Source.class)) {
                 $.reset(new Row($.asExpected()));
             } else if($.is(Number.class)) {
@@ -218,6 +227,10 @@ public class Table implements Tabular, Coordinate {
                 rows.add(row);
             }
         }
+    }
+
+    public int rowsSize() {
+        return rows.size();
     }
 
     @Override

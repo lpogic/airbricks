@@ -8,6 +8,7 @@ import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.special.NumSource;
 
 public class NoteCars extends Airbrick<Note> {
 
@@ -31,7 +32,7 @@ public class NoteCars extends Airbrick<Note> {
             LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
             float xOffset = font.getStringWidth(host.text.string().get().substring(0, begin), host.text.height().getFloat());
             return host.text.left().getFloat() + xOffset;
-        }, host.height(), host.text.font(), host.left(), headIndex);
+        }, host.height(), host.text.font(), host.left(), headIndex, tailIndex);
 
         body.y().let(() -> {
             ColorText text = host.text;
@@ -45,26 +46,8 @@ public class NoteCars extends Airbrick<Note> {
             String str = host.text.string().get().substring(minMax[0], minMax[1]);
             return font.getStringWidth(str, host.text.height().getFloat());
         }, host.text.font(), host.string(), host.height(), headIndex, tailIndex);
-    }
 
-    @Override
-    public void show() {
-        show(body, host.text);
-    }
-
-    @Override
-    public void hide() {
-        hide(body);
-    }
-
-    @Override
-    public void move() {
-
-    }
-
-    @Override
-    public void stop() {
-
+        $bricks.set(body);
     }
 
     public int[] getMinMax() {
@@ -104,5 +87,45 @@ public class NoteCars extends Airbrick<Note> {
     public void reset() {
         headIndex.set(0);
         tailIndex.set(0);
+    }
+
+    @Override
+    public NumSource x() {
+        return body.x();
+    }
+
+    @Override
+    public NumSource y() {
+        return body.y();
+    }
+
+    @Override
+    public NumSource width() {
+        return body.width();
+    }
+
+    @Override
+    public NumSource height() {
+        return body.height();
+    }
+
+    @Override
+    public NumSource left() {
+        return body.left();
+    }
+
+    @Override
+    public NumSource right() {
+        return body.right();
+    }
+
+    @Override
+    public NumSource top() {
+        return body.top();
+    }
+
+    @Override
+    public NumSource bottom() {
+        return body.bottom();
     }
 }

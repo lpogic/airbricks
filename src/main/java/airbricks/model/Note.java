@@ -8,20 +8,22 @@ import bricks.font.LoadedFont;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
 import bricks.graphic.Rectangular;
+import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.input.Story;
 import bricks.input.UserAction;
 import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
-import bricks.var.impulse.Edge;
 import bricks.var.impulse.Impulse;
 import bricks.var.impulse.State;
 import bricks.var.special.Num;
 import bricks.var.special.NumSource;
 import suite.suite.util.Cascade;
 
-public class Note extends Airbrick<Host> implements Rectangular {
+import static suite.suite.$.set$;
+
+public class Note extends Airbrick<Host> {
 
     final ColorText text;
     final ColorRectangle cursor;
@@ -45,7 +47,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
             else hide();
         });
 
-        mousePress = mouse().leftButton().willBe(Edge::rising);
+        mousePress = mouse().leftButton().willBe(Mouse.Button::pressing);
 
         text = text();
         text.height().set(20);
@@ -72,11 +74,20 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
         cars = new NoteCars(this);
         editable = Vars.set(true);
+        $bricks.set(text);
     }
 
-    @Override
-    public void move() {
-
+    public void updateCursorPosition(boolean resetCars) {
+        var mouse = mouse();
+        float x = text.left().getFloat();
+        int newCursorPos = order(FontManager.class).getFont(text.font().get())
+                .getCursorPosition(text.string().get(), text.height().getFloat(),
+                        x, mouse.position().x().getFloat());
+        cursorPosition.set(newCursorPos);
+        cars.headIndex.set(newCursorPos);
+        if(resetCars) {
+            cars.tailIndex.set(newCursorPos);
+        }
     }
 
     @Override
@@ -86,16 +97,8 @@ public class Note extends Airbrick<Host> implements Rectangular {
         if(selected.get()) {
             boolean pressOccur = mousePress.occur();
             var mouse = mouse();
-            if(mouse.leftButton().get()) {
-                float x = text.left().getFloat();
-                int newCursorPos = order(FontManager.class).getFont(text.font().get())
-                        .getCursorPosition(text.string().get(), text.height().getFloat(),
-                                x, mouse.position().x().getFloat());
-                cursorPosition.set(newCursorPos);
-                cars.headIndex.set(newCursorPos);
-                if(pressOccur) {
-                    cars.tailIndex.set(newCursorPos);
-                }
+            if(mouse.leftButton().isPressed()) {
+                updateCursorPosition(pressOccur);
             }
 
             var keyboard = keyboard();
@@ -119,7 +122,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
             var keyEvents = keyboard.getEvents();
             if(keyEvents.size() > 0) {
                 int cursorPos = cursorPosition.get();
-                for (var e : keyboard.getEvents()) {
+                for (var e : keyEvents.eachAs(Keyboard.KeyEvent.class)) {
                     if (e.isHold()) {
                         if (e.key.isNumPad() && !e.isNumLocked()) {
                             switch (e.key) {
@@ -408,11 +411,6 @@ public class Note extends Airbrick<Host> implements Rectangular {
         }
     }
 
-    @Override
-    public void stop() {
-
-    }
-
     public void select(int begin, int length) {
         if(begin >= 0 && length >= 0 && begin + length < text.string().get().length()) {
             cars.tailIndex.set(begin);
@@ -686,18 +684,16 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
     State<Boolean> shown;
 
-    @Override
     public void show() {
         if(!shown.get()) {
-            show(text);
+            $bricks.set(text);
             shown.setState(true);
         }
     }
 
-    @Override
     public void hide() {
         if (shown.get()) {
-            hide(text);
+            $bricks.unset(text);
             selected.set(false);
             shown.setState(false);
         }
@@ -711,16 +707,15 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
     public void select() {
         if(!selected.get()) {
-            use(cursor);
-            use(cars, text);
+            $bricks.unset(text);
+            $bricks.set(cars, cursor, text);
             selected.setState(true);
         }
     }
 
     public void unselect() {
         if(selected.getState()) {
-            cancel(cursor);
-            cancel(cars);
+            $bricks.unset(cursor, cars);
             selected.setState(false);
         }
     }
