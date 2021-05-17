@@ -1,11 +1,10 @@
 package airbricks;
 
-import airbricks.model.AirComposite;
 import bricks.wall.Wall;
 
 import static suite.suite.$.arm$;
 
-public class Main extends Wall implements AirComposite {
+public class Main extends Wall {
 
     @Override
     protected void setup() {

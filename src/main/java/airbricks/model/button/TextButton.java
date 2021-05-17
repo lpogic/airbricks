@@ -1,5 +1,7 @@
-package airbricks.model;
+package airbricks.model.button;
 
+import airbricks.model.InputBase;
+import airbricks.model.Selectable;
 import bricks.Color;
 import bricks.Debug;
 import bricks.Sized;
@@ -13,16 +15,18 @@ import bricks.var.Var;
 
 import static suite.suite.$.set$;
 
-public class Button extends InputBase implements Rectangle, Selectable {
+public class TextButton extends InputBase implements Selectable {
 
     public final ColorText text;
 
-    public Button(Host host) {
+    public TextButton(Host host) {
         super(host);
+
         text = text();
         text.color().set(Color.hex("#cdb432"));
-        adjust(Sized.relative(text, 40, 20));
         text.aim(this);
+
+        adjust(Sized.relative(text, 40, 20));
 
         $bricks.set(text);
     }

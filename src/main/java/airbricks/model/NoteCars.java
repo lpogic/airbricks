@@ -15,18 +15,16 @@ public class NoteCars extends Airbrick<Note> {
     ColorRectangle body;
     Var<Integer> headIndex;
     Var<Integer> tailIndex;
-    Var<Color> color;
 
     public NoteCars(Note note) {
         super(note);
 
-        color = Vars.set(Color.mix(0,.8,.6));
         headIndex = Vars.set(0);
         tailIndex = Vars.set(0);
 
-        body = rect();
+        body = rect(Color.mix(0,.8,.6));
         body.height().let(host.height());
-        body.color().let(color);
+
         body.left().let(() -> {
             int begin = getMinIndex();
             LoadedFont font = order(FontManager.class).getFont(host.text.font().get());

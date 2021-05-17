@@ -19,9 +19,11 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
 
     public NoteInput(Host host) {
         super(host);
-        note = new Note(this);
-        adjust(Sized.relative(note, 20));
+
+        note = note();
         note.aim(this);
+
+        adjust(Sized.relative(note, 20));
         when(selected(), () -> {
             note.select();
             note.updateCursorPosition(true);

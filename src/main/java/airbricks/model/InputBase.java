@@ -9,10 +9,9 @@ import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.var.impulse.State;
 import bricks.var.special.Num;
-import bricks.wall.MouseObserver;
 
 
-public class InputBase extends Airbrick<Host> implements Rectangle {
+public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangleBody {
 
     final Rectangle body;
     final Num offset;
@@ -42,15 +41,16 @@ public class InputBase extends Airbrick<Host> implements Rectangle {
 
         body = new Centroid();
         offset = Vars.num(0);
+
         rect = rect();
         rect.aim(body);
         rect.adjust(Sized.relative(body, offset));
         rect.color().let(rectColor);
 
-        selectRect = rect();
+        selectRect = rect(Color.mix(1, .8, .6));
         selectRect.aim(rect);
         selectRect.adjust(Sized.relative(rect, 4));
-        selectRect.color().set(Color.mix(1, .8, .6));
+
 
         contentRect = rect();
         contentRect.aim(rect);
@@ -63,24 +63,24 @@ public class InputBase extends Airbrick<Host> implements Rectangle {
     State<Boolean> pressed;
 
     public void press(boolean state) {
-        if(state) press();
-        else release();
+        if(pressed.get() != state) {
+            if(state) {
+                rect.color().let(rectPressColor);
+                contentRect.color().let(contentRectPressColor);
+            } else {
+                rect.color().let(rectColor);
+                contentRect.color().let(contentRectColor);
+            }
+            pressed.setState(state);
+        }
     }
 
     public void press() {
-        if(!pressed.get()) {
-            rect.color().let(rectPressColor);
-            contentRect.color().let(contentRectPressColor);
-            pressed.setState(true);
-        }
+        press(true);
     }
 
     public void release() {
-        if(pressed.get()) {
-            rect.color().let(rectColor);
-            contentRect.color().let(contentRectColor);
-            pressed.setState(false);
-        }
+        press(false);
     }
 
     public Var<Boolean> pressed() {
@@ -90,22 +90,22 @@ public class InputBase extends Airbrick<Host> implements Rectangle {
     State<Boolean> highlighted;
 
     public void highlight(boolean state) {
-        if(state) highlight();
-        else equalize();
+        if(highlighted.get() != state) {
+            if(state) {
+                offset.set(4);
+            } else {
+                offset.set(0);
+            }
+            highlighted.setState(state);
+        }
     }
 
     public void highlight() {
-        if(!highlighted.get()) {
-            offset.set(4);
-            highlighted.setState(true);
-        }
+        highlight(true);
     }
 
     public void equalize() {
-        if(highlighted.get()) {
-            offset.set(0);
-            highlighted.setState(false);
-        }
+        highlight(false);
     }
 
     public Var<Boolean> highlighted() {
@@ -118,11 +118,10 @@ public class InputBase extends Airbrick<Host> implements Rectangle {
         if(state != selected.get()) {
             if(state) {
                 $bricks.aimedSet(rect, selectRect);
-                selected.setState(true);
             } else {
                 $bricks.unset(selectRect);
-                selected.setState(false);
             }
+            selected.setState(state);
         }
     }
 
@@ -148,36 +147,7 @@ public class InputBase extends Airbrick<Host> implements Rectangle {
     }
 
     @Override
-    public Num width() {
-        return body.width();
+    public Rectangle getBody() {
+        return body;
     }
-    @Override
-    public Num height() {
-        return body.height();
-    }
-    @Override
-    public Num left() {
-        return body.left();
-    }
-    @Override
-    public Num right() {
-        return body.right();
-    }
-    @Override
-    public Num top() {
-        return body.top();
-    }
-    @Override
-    public Num bottom() {
-        return body.bottom();
-    }
-    @Override
-    public Num x() {
-        return body.x();
-    }
-    @Override
-    public Num y() {
-        return body.y();
-    }
-
 }

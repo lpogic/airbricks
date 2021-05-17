@@ -21,9 +21,7 @@ import bricks.var.special.Num;
 import bricks.var.special.NumSource;
 import suite.suite.util.Cascade;
 
-import static suite.suite.$.set$;
-
-public class Note extends Airbrick<Host> {
+public class Note extends Airbrick<Host> implements Rectangular {
 
     final ColorText text;
     final ColorRectangle cursor;
@@ -36,16 +34,8 @@ public class Note extends Airbrick<Host> {
     public Note(Host host) {
         super(host);
 
-        selected = new State<>(false);
-        when(selected.signal(), () -> {
-            if (selected.getInput()) select();
-            else unselect();
-        });
-        shown = new State<>(false);
-        when(shown.signal(), () -> {
-            if(shown.getInput()) show();
-            else hide();
-        });
+        selected = state(false, this::select);
+        shown = state(false, this::show);
 
         mousePress = mouse().leftButton().willBe(Mouse.Button::pressing);
 
@@ -684,19 +674,23 @@ public class Note extends Airbrick<Host> {
 
     State<Boolean> shown;
 
-    public void show() {
-        if(!shown.get()) {
-            $bricks.set(text);
-            shown.setState(true);
+    public void show(boolean state) {
+        if(shown.get() != state) {
+            if(state) {
+                $bricks.set(text);
+            } else {
+                $bricks.unset(text);
+            }
+            shown.setState(state);
         }
     }
 
+    public void show() {
+        show(true);
+    }
+
     public void hide() {
-        if (shown.get()) {
-            $bricks.unset(text);
-            selected.set(false);
-            shown.setState(false);
-        }
+        show(false);
     }
 
     public Var<Boolean> shown() {
@@ -705,19 +699,24 @@ public class Note extends Airbrick<Host> {
 
     State<Boolean> selected;
 
-    public void select() {
-        if(!selected.get()) {
-            $bricks.unset(text);
-            $bricks.set(cars, cursor, text);
-            selected.setState(true);
+    public void select(boolean state) {
+        if(selected.get() != state) {
+            if(state) {
+                $bricks.unset(text);
+                $bricks.set(cars, cursor, text);
+            } else {
+                $bricks.unset(cursor, cars);
+            }
+            selected.setState(false);
         }
     }
 
+    public void select() {
+        select(true);
+    }
+
     public void unselect() {
-        if(selected.getState()) {
-            $bricks.unset(cursor, cars);
-            selected.setState(false);
-        }
+        select(false);
     }
 
     public Var<Boolean> selected() {

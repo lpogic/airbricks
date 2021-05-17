@@ -8,4 +8,5 @@ open module airbricks {
     requires bricks;
 
     exports airbricks.model;
+    exports airbricks.model.button;
 }
