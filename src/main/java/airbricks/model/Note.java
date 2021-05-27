@@ -707,7 +707,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
             } else {
                 $bricks.unset(cursor, cars);
             }
-            selected.setState(false);
+            selected.setState(state);
         }
     }
 

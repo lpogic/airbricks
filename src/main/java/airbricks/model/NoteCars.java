@@ -22,7 +22,7 @@ public class NoteCars extends Airbrick<Note> {
         headIndex = Vars.set(0);
         tailIndex = Vars.set(0);
 
-        body = rect(Color.mix(0,.8,.6));
+        body = rect(Color.hex("#2e5fa6"));
         body.height().let(host.height());
 
         body.left().let(() -> {

@@ -1,41 +1,39 @@
-package airbricks.model;
+package airbricks.model.button;
 
+import airbricks.model.InputBase;
+import airbricks.model.Selectable;
+import bricks.Color;
 import bricks.Sized;
-import bricks.graphic.Rectangle;
+import bricks.graphic.ColorText;
 import bricks.input.Key;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
-import bricks.input.Story;
 import bricks.trade.Host;
 import bricks.var.Var;
-import suite.suite.Subject;
 
 import static suite.suite.$.set$;
 
-public class NoteInput extends InputBase implements Rectangle, Selectable {
+public class OptionButton extends InputBase implements Selectable {
 
-    protected Note note;
+    public final ColorText text;
 
-    private final Story story;
-
-    public NoteInput(Host host) {
+    public OptionButton(Host host) {
         super(host);
 
-        note = note();
-        note.left().let(this.left().perFloat(l -> l + 10));
-        note.y().let(this.y());
+        text = text();
+        text.color().set(Color.hex("#104bf1"));
+        text.aim(this);
 
-        adjust(Sized.relative(note, 20));
-        when(selected(), () -> {
-            note.select();
-            note.updateCursorPosition(true);
-        }, note::unselect);
+        adjust(Sized.relative(text, 40, 20));
 
-        story = new Story(10);
-        $bricks.set(note);
+        outlineThick.set(0);
+
+        $bricks.set(text);
     }
 
+    @Override
     public void update() {
+        super.update();
 
         var mouse = mouse();
         boolean mouseIn = hasMouse.get();
@@ -54,13 +52,6 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
                     }
                 }
             }
-        }
-
-        var wall = wall();
-        if(leftButtonPressEvent && mouseIn) {
-            wall.lockMouse(this);
-        } else if(leftButtonReleaseEvent && wall.mouseLocked()) {
-            wall.unlockMouse();
         }
 
         if (selected().get()) {
@@ -100,26 +91,13 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
         } else {
             press(false);
             light(mouseIn && !leftButton);
-            if(leftButtonPressEvent && mouseIn) {
+            if(leftButton && mouseIn) {
                 select(true);
             }
         }
-
-        super.update();
-    }
-
-    public Subject order(Subject $) {
-        if(Story.class.equals($.raw())) {
-            return set$(story);
-        }
-        return super.order($);
     }
 
     public Var<String> string() {
-        return note.string();
-    }
-
-    public Var<Boolean> editable() {
-        return note.editable();
+        return text.string();
     }
 }

@@ -3,10 +3,8 @@ package airbricks.model.button;
 import airbricks.model.InputBase;
 import airbricks.model.Selectable;
 import bricks.Color;
-import bricks.Debug;
 import bricks.Sized;
 import bricks.graphic.ColorText;
-import bricks.graphic.Rectangle;
 import bricks.input.Key;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
@@ -23,7 +21,7 @@ public class TextButton extends InputBase implements Selectable {
         super(host);
 
         text = text();
-        text.color().set(Color.hex("#cdb432"));
+        text.color().set(Color.hex("#104bf1"));
         text.aim(this);
 
         adjust(Sized.relative(text, 40, 20));
@@ -55,8 +53,8 @@ public class TextButton extends InputBase implements Selectable {
 
         var wall = wall();
         if(leftButtonPressEvent && mouseIn) {
-            wall.lockMouse();
-        } else if(leftButtonReleaseEvent && wall.isMouseLocked()) {
+            wall.lockMouse(this);
+        } else if(leftButtonReleaseEvent && wall.mouseLocked()) {
             wall.unlockMouse();
         }
 
@@ -92,11 +90,11 @@ public class TextButton extends InputBase implements Selectable {
                 click();
             }
             press(pressState);
-            highlight(mouseIn && !pressState);
+            light(mouseIn && !pressState);
             select(!(tabPressEvent || (!mouseIn && leftButtonPressEvent)));
         } else {
             press(false);
-            highlight(mouseIn && !leftButton);
+            light(mouseIn && !leftButton);
             if(leftButtonPressEvent && mouseIn) {
                 select(true);
             }

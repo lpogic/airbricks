@@ -13,65 +13,70 @@ import bricks.var.special.Num;
 
 public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangleBody {
 
-    final Rectangle body;
-    final Num offset;
+    public final Num outlineThick;
 
-    final ColorRectangle rect;
-    final Var<Color> rectColor;
-    final Var<Color> rectPressColor;
+    public final ColorRectangle background;
+    public final Var<Color> backgroundColor;
+    public final Var<Color> backgroundLightColor;
+    public final Var<Color> backgroundPressColor;
 
-    final ColorRectangle contentRect;
-    final Var<Color> contentRectColor;
-    final Var<Color> contentRectPressColor;
-
-    final ColorRectangle selectRect;
+    public final ColorRectangle outline;
+    public final Var<Color> outlineColor;
+    public final Var<Color> outlineSelectColor;
 
     public InputBase(Host host) {
         super(host);
 
         selected = state(false, this::select);
         pressed = state(false, this::press);
-        highlighted = state(false, this::highlight);
+        lighted = state(false, this::light);
         clicked = Vars.get();
 
-        rectColor = Vars.set(Color.hex("#255a09"));
-        rectPressColor = Vars.set(Color.hex("#255a09"));
-        contentRectColor = Vars.set(Color.hex("#0d3205"));
-        contentRectPressColor = Vars.set(Color.hex("#0d3f05"));
+        backgroundColor = Vars.set(Color.hex("#292B2B"));
+        backgroundLightColor = Vars.set(Color.hex("#212323"));
+        backgroundPressColor = Vars.set(Color.hex("#191B1B"));
 
-        body = new Centroid();
-        offset = Vars.num(0);
+        outlineColor = Vars.set(Color.hex("#1e1a2c"));
+        outlineSelectColor = Vars.set(Color.mix(1, .8, .6));
 
-        rect = rect();
-        rect.aim(body);
-        rect.adjust(Sized.relative(body, offset));
-        rect.color().let(rectColor);
+        outlineThick = Vars.num(4);
 
-        selectRect = rect(Color.mix(1, .8, .6));
-        selectRect.aim(rect);
-        selectRect.adjust(Sized.relative(rect, 4));
+        outline = rect();
+        outline.color().let(outlineColor);
 
+        background = rect();
+        background.aim(outline);
+        background.adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
+        background.color().let(backgroundColor);
 
-        contentRect = rect();
-        contentRect.aim(rect);
-        contentRect.adjust(Sized.relative(rect, -14));
-        contentRect.color().let(contentRectColor);
+        $bricks.set(outline, background);
+    }
 
-        $bricks.set(rect, contentRect);
+    public void updateState() {
+        boolean pressed = this.pressed.get();
+        boolean lighted = this.lighted.get();
+        boolean selected = this.selected.get();
+        if(pressed) {
+            background.color().let(backgroundPressColor);
+        } else if(lighted) {
+            background.color().let(backgroundLightColor);
+        } else {
+            background.color().let(backgroundColor);
+        }
+
+        if(selected) {
+            outline.color().let(outlineSelectColor);
+        } else {
+            outline.color().let(outlineColor);
+        }
     }
 
     State<Boolean> pressed;
 
     public void press(boolean state) {
         if(pressed.get() != state) {
-            if(state) {
-                rect.color().let(rectPressColor);
-                contentRect.color().let(contentRectPressColor);
-            } else {
-                rect.color().let(rectColor);
-                contentRect.color().let(contentRectColor);
-            }
             pressed.setState(state);
+            updateState();
         }
     }
 
@@ -87,41 +92,33 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
         return pressed;
     }
 
-    State<Boolean> highlighted;
+    State<Boolean> lighted;
 
-    public void highlight(boolean state) {
-        if(highlighted.get() != state) {
-            if(state) {
-                offset.set(4);
-            } else {
-                offset.set(0);
-            }
-            highlighted.setState(state);
+    public void light(boolean state) {
+        if(lighted.get() != state) {
+            lighted.setState(state);
+            updateState();
         }
     }
 
-    public void highlight() {
-        highlight(true);
+    public void light() {
+        light(true);
     }
 
-    public void equalize() {
-        highlight(false);
+    public void dim() {
+        light(false);
     }
 
-    public Var<Boolean> highlighted() {
-        return highlighted;
+    public Var<Boolean> lighted() {
+        return lighted;
     }
 
     State<Boolean> selected;
 
     public void select(boolean state) {
         if(state != selected.get()) {
-            if(state) {
-                $bricks.aimedSet(rect, selectRect);
-            } else {
-                $bricks.unset(selectRect);
-            }
             selected.setState(state);
+            updateState();
         }
     }
 
@@ -148,6 +145,6 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
 
     @Override
     public Rectangle getBody() {
-        return body;
+        return outline;
     }
 }
