@@ -39,19 +39,29 @@ public class NoteCars extends Airbrick<Note> {
         });
 
         body.width().let(() -> {
-            int[] minMax = getMinMax();
+            var minMax = getMinMax();
+            String str = host.text.string().get();
             LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
-            String str = host.text.string().get().substring(minMax[0], minMax[1]);
+            str = substr(str, minMax.min, minMax.max);
             return font.getStringWidth(str, host.text.height().getFloat());
         }, host.text.font(), host.string(), host.height(), headIndex, tailIndex);
 
         $bricks.set(body);
     }
 
-    public int[] getMinMax() {
+    String substr(String str, int begin, int end) {
+        int len = str.length();
+        if(begin > len) return str;
+        if(end > len) return str.substring(begin);
+        return str.substring(begin, end);
+    }
+
+    public record MinMax(int min, int max){}
+
+    public MinMax getMinMax() {
         int head = headIndex.get();
         int tail = tailIndex.get();
-        return head < tail ? new int[]{head, tail} : new int[]{tail, head};
+        return head < tail ? new MinMax(head, tail) : new MinMax(tail, head);
     }
 
     public int getMinIndex() {

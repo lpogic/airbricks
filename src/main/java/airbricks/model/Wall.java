@@ -2,6 +2,8 @@ package airbricks.model;
 
 import bricks.Color;
 import bricks.input.Mouse;
+import bricks.var.Var;
+import bricks.var.Vars;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLUtil;
@@ -12,7 +14,7 @@ import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.opengl.GL11.*;
 import static suite.suite.$.set$;
 
-public abstract class Wall extends bricks.wall.Wall implements Airbricklayer {
+public abstract class Wall extends bricks.wall.Wall implements Airbricklayer, Selectable {
 
     static Subject $walls = set$();
 
@@ -86,7 +88,7 @@ public abstract class Wall extends bricks.wall.Wall implements Airbricklayer {
     public void update() {
 
         var mouse = mouse();
-        boolean mouseIn = hasMouse.get();
+        boolean mouseIn = hasMouse.get() == HasMouse.DIRECT;
         boolean leftButtonPressEvent = false;
         var mEvents = mouse.getEvents();
         for(var e : mEvents.eachAs(Mouse.ButtonEvent.class)) {
@@ -100,12 +102,18 @@ public abstract class Wall extends bricks.wall.Wall implements Airbricklayer {
         }
 
         if(leftButtonPressEvent && mouseIn) {
-//            selector().select(this);
+            selector().select(this);
         }
 
         super.update();
     }
 
+    public Selector selector() {
+        return order(Selector.class);
+    }
 
-
+    @Override
+    public Var<Boolean> selected() {
+        return Vars.set(false);
+    }
 }

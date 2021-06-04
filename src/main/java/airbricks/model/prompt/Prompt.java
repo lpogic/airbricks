@@ -1,5 +1,9 @@
-package airbricks.model;
+package airbricks.model.prompt;
 
+import airbricks.model.Airbrick;
+import airbricks.model.InputBase;
+import airbricks.model.Int;
+import airbricks.model.WithRectangleBody;
 import airbricks.model.button.OptionButton;
 import airbricks.model.button.TextButton;
 import bricks.Color;
@@ -13,35 +17,36 @@ import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.var.impulse.State;
+import bricks.var.special.NumSource;
 import bricks.wall.Brick;
+import bricks.wall.FantomBrick;
 import suite.suite.$;
 import suite.suite.Subject;
 import suite.suite.Suite;
+import suite.suite.action.Statement;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
 import static suite.suite.$.set$;
 
-public class Prompt<O> extends Airbrick<Host> implements WithRectangleBody {
+public class Prompt extends Airbrick<Host> implements WithRectangleBody {
 
     ColorRectangle bg;
-    List<O> options;
-    int index;
     List<OptionButton> buttons;
-    Function<O, String> labelizer;
+    FantomBrick buttonsBrick;
+    List<String> options;
+    int offset;
 
     public Prompt(Host host) {
         super(host);
 
-        picked = Vars.set(0);
+        picked = Vars.get();
 
         bg = rect();
-
-        options = new ArrayList<>();
-        labelizer = String::valueOf;
 
         buttons = new ArrayList<>();
 
@@ -62,28 +67,42 @@ public class Prompt<O> extends Airbrick<Host> implements WithRectangleBody {
         }
         bg.height().let(() -> buttons.stream().map(ob -> ob.height().getFloat()).reduce(0f, Float::sum));
 
-        $bricks.setEntire(buttons);
+        buttonsBrick = new FantomBrick(this);
+        $bricks.set(buttonsBrick);
     }
 
-    Var<Integer> picked;
+    Var<Int> picked;
 
     public void pick(int i) {
-        picked.set(i);
+        picked.set(new Int(i));
     }
 
-    public Var<Integer> picked() {
+    public Var<Int> picked() {
         return picked;
     }
 
-    public void setOptions(Collection<O> newOptions) {
-        options = new ArrayList<>(newOptions);
-        for(int i = 0;i < buttons.size();++i) {
-            buttons.get(i).string().set(String.valueOf(options.get(i)));
-        }
+    public void select(int i) {
+        buttons.get(i).select();
     }
 
-    public O getOption(int i) {
-        return options.get(i);
+    public void setOptions(List<String> options) {
+        this.options = options;
+    }
+
+    void resetOffset() {
+        offset = 0;
+    }
+
+    void updateButtons() {
+        for(int i = 0;i < buttons.size();++i) {
+            var button = buttons.get(i);
+            if(options.size() > i + offset) {
+                button.string().set(options.get(i));
+                buttonsBrick.bricks().set(button);
+            } else {
+                buttonsBrick.bricks().unset(button);
+            }
+        }
     }
 
     public void attach(Brick<?> brick) {
@@ -92,11 +111,15 @@ public class Prompt<O> extends Airbrick<Host> implements WithRectangleBody {
         bg.width().let(brick.width());
     }
 
-    public void attach(InputBase input) {
-        bg.top().let(input.bottom());
-        bg.left().let(input.left());
-        bg.width().let(input.width());
-        input.when(input.selected(), () -> wall().push(this), () -> wall().pop(this));
+    public void attach(InputBase input, List<String> options) {
+        attach(input);
+        setOptions(options);
+        resetOffset();
+        updateButtons();
+        Statement push = () -> wall().push(this);
+        input.when(input.selected(), push, () -> wall().pop(this));
+        input.when(input.clicked(), push);
+        input.when(keyboard().key(Key.Code.DOWN).willBe(Key.Event::isPress), () -> wall().push(this));
     }
 
     @Override
@@ -108,7 +131,7 @@ public class Prompt<O> extends Airbrick<Host> implements WithRectangleBody {
     public void update() {
 
         var mouse = mouse();
-        boolean mouseIn = hasMouse.get();
+        boolean mouseIn = mouseIn();
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
         var mEvents = mouse.getEvents();
@@ -128,9 +151,7 @@ public class Prompt<O> extends Airbrick<Host> implements WithRectangleBody {
         var wall = wall();
         if(leftButtonPressEvent && mouseIn) {
             wall.lockMouse(this);
-            System.out.println("lock");
         } else if(leftButtonReleaseEvent && wall.mouseLocked()) {
-            System.out.println("unlock");
             wall.unlockMouse();
         }
 

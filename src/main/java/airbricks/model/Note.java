@@ -27,7 +27,6 @@ public class Note extends Airbrick<Host> implements Rectangular {
     final ColorRectangle cursor;
     final NoteCars cars;
     final Var<Integer> cursorPosition;
-    final Var<Boolean> editable;
 
     final Impulse mousePress;
 
@@ -35,7 +34,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
         super(host);
 
         selected = state(false, this::select);
-        shown = state(false, this::show);
+        editable = state(true, this::setEditable);
 
         mousePress = mouse().leftButton().willBe(Mouse.Button::pressing);
 
@@ -44,6 +43,22 @@ public class Note extends Airbrick<Host> implements Rectangular {
         text.color().set(Color.mix(1, 1, 1));
 
         cursorPosition = Vars.set(0);
+        cars = new NoteCars(this);
+
+        when(string()).then(() -> {
+            int len = string().get().length();
+            if(len < cursorPosition.get()) {
+                cursorPosition.set(len);
+            }
+            NoteCars.MinMax mm = cars.getMinMax();
+            if(len > mm.min()) {
+                cars.headIndex.set(len);
+                cars.tailIndex.set(len);
+            } else if(len > mm.max()) {
+                cars.tailIndex.set(mm.min());
+                cars.headIndex.set(len);
+            }
+        });
 
         cursor = rect();
         cursor.width().set(1);
@@ -62,8 +77,6 @@ public class Note extends Airbrick<Host> implements Rectangular {
             return y + font.getScaledDescent() / 2;
         });
 
-        cars = new NoteCars(this);
-        editable = Vars.set(true);
         $bricks.set(text);
     }
 
@@ -149,16 +162,16 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 case NUM_0_INSERT -> {
                                     if(!editable.get()) break;
                                     String clip = clipboard().get();
-                                    int[] minMax;
+                                    NoteCars.MinMax minMax;
                                     if(cars.isAny()) {
                                         minMax = cars.getMinMax();
                                     } else {
-                                        minMax = new int[]{cursorPos, cursorPos};
+                                        minMax = new NoteCars.MinMax(cursorPos, cursorPos);
                                     }
                                     String str = text.string().get();
-                                    text.string().set(str.substring(0, minMax[0]) +
+                                    text.string().set(str.substring(0, minMax.min()) +
                                             clip +
-                                            str.substring(minMax[1]));
+                                            str.substring(minMax.max()));
                                     cursorPosition.set(cursorPos + clip.length());
                                 }
                                 case NUM_DECIMAL_DELETE -> {
@@ -370,6 +383,18 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                     }
                                 }
                             }
+                            case B -> {
+                                if(!editable.get()) break;
+                                if(e.isControlled() && !e.isAltered()) {
+                                    String cut = cut();
+                                    String clip = clipboard().get();
+                                    if(!clip.isEmpty()) {
+                                        paste(clip);
+                                        cars.reset();
+                                    }
+                                    if(!cut.isEmpty()) clipboard().set(cut);
+                                }
+                            }
                             case Z -> {
                                 if(!editable.get()) break;
                                 if(e.isControlled() && !e.isAltered()) {
@@ -402,7 +427,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
     }
 
     public void select(int begin, int length) {
-        if(begin >= 0 && length >= 0 && begin + length < text.string().get().length()) {
+        if(begin >= 0 && length >= 0 && begin + length <= text.string().get().length()) {
             cars.tailIndex.set(begin);
             cars.headIndex.set(begin + length);
         }
@@ -410,19 +435,19 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
     public String copy() {
         if (cars.isAny()) {
-            int[] minMax = cars.getMinMax();
+            var minMax = cars.getMinMax();
             String str = text.string().get();
-            return str.substring(minMax[0], minMax[1]);
+            return str.substring(minMax.min(), minMax.max());
         }
         return "";
     }
 
     public String cut() {
         if(cars.isAny()) {
-            int[] minMax = cars.getMinMax();
+            var minMax = cars.getMinMax();
             String str = text.string().get();
-            String cut = str.substring(minMax[0], minMax[1]);
-            int cursorBegin = minMax[0];
+            String cut = str.substring(minMax.min(), minMax.max());
+            int cursorBegin = minMax.min();
 
             UserAction ua = new UserAction() {
 
@@ -454,34 +479,34 @@ public class Note extends Airbrick<Host> implements Rectangular {
     }
 
     public void paste(String pasted) {
-        int[] minMax;
+        NoteCars.MinMax minMax;
         if(cars.isAny()) {
             minMax = cars.getMinMax();
         } else {
             int cursorPos = cursorPosition.get();
-            minMax = new int[]{cursorPos, cursorPos};
+            minMax = new NoteCars.MinMax(cursorPos, cursorPos);
         }
         String str = text.string().get();
-        String replaced = str.substring(minMax[0], minMax[1]);
+        String replaced = str.substring(minMax.min(), minMax.max());
 
         UserAction ua = new UserAction() {
 
             @Override
             public void front() {
                 String str = text.string().get();
-                text.string().set(str.substring(0, minMax[0]) + pasted +
-                        str.substring(minMax[1]));
-                cursorPosition.set(minMax[0] + pasted.length());
-                cars.headIndex.set(minMax[0] + pasted.length());
-                cars.tailIndex.set(minMax[0]);
+                text.string().set(str.substring(0, minMax.min()) + pasted +
+                        str.substring(minMax.max()));
+                cursorPosition.set(minMax.min() + pasted.length());
+                cars.headIndex.set(minMax.min() + pasted.length());
+                cars.tailIndex.set(minMax.min());
             }
 
             @Override
             public void back() {
                 String str = text.string().get();
-                text.string().set(str.substring(0, minMax[0]) + replaced +
-                        str.substring(minMax[0] + pasted.length()));
-                cursorPosition.set(minMax[0] + replaced.length());
+                text.string().set(str.substring(0, minMax.min()) + replaced +
+                        str.substring(minMax.min() + pasted.length()));
+                cursorPosition.set(minMax.min() + replaced.length());
                 cars.reset();
             }
         };
@@ -491,10 +516,10 @@ public class Note extends Airbrick<Host> implements Rectangular {
     }
 
     public void caps(boolean upper) {
-        int[] minMax = cars.getMinMax();
+        var minMax = cars.getMinMax();
         String str = text.string().get();
-        String capsed = str.substring(minMax[0], minMax[1]);
-        int cursorBegin = minMax[0];
+        String capsed = str.substring(minMax.min(), minMax.max());
+        int cursorBegin = minMax.min();
 
         UserAction ua = new UserAction() {
 
@@ -672,42 +697,32 @@ public class Note extends Airbrick<Host> implements Rectangular {
         }
     }
 
-    State<Boolean> shown;
-
-    public void show(boolean state) {
-        if(shown.get() != state) {
-            if(state) {
-                $bricks.set(text);
-            } else {
+    private void updateState() {
+        boolean selected = this.selected.get();
+        boolean editable = this.editable.get();
+        if(editable) {
+            if(selected) {
                 $bricks.unset(text);
+                $bricks.set(cars, cursor, text);
+            } else {
+                $bricks.unset(cursor, cars);
             }
-            shown.setState(state);
+        } else {
+            if(selected) {
+                $bricks.unset(text, cursor);
+                $bricks.set(cars, text);
+            } else {
+                $bricks.unset(cursor, cars);
+            }
         }
-    }
-
-    public void show() {
-        show(true);
-    }
-
-    public void hide() {
-        show(false);
-    }
-
-    public Var<Boolean> shown() {
-        return shown;
     }
 
     State<Boolean> selected;
 
     public void select(boolean state) {
         if(selected.get() != state) {
-            if(state) {
-                $bricks.unset(text);
-                $bricks.set(cars, cursor, text);
-            } else {
-                $bricks.unset(cursor, cars);
-            }
             selected.setState(state);
+            updateState();
         }
     }
 
@@ -725,6 +740,14 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
     public Var<String> string() {
         return text.string();
+    }
+
+    final State<Boolean> editable;
+    public void setEditable(boolean state) {
+        if(editable.get() != state) {
+            editable.set(state);
+            updateState();
+        }
     }
 
     public Var<Boolean> editable() {

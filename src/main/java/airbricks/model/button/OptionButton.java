@@ -36,7 +36,7 @@ public class OptionButton extends InputBase implements Selectable {
         super.update();
 
         var mouse = mouse();
-        boolean mouseIn = hasMouse.get();
+        boolean mouseIn = mouseIn();
         boolean leftButton = mouse.leftButton().isPressed();
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
@@ -91,7 +91,7 @@ public class OptionButton extends InputBase implements Selectable {
         } else {
             press(false);
             light(mouseIn && !leftButton);
-            if(leftButton && mouseIn) {
+            if(leftButton && hasMouse.get() == HasMouse.DIRECT) {
                 select(true);
             }
         }

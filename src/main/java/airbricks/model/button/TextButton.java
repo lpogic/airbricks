@@ -33,7 +33,7 @@ public class TextButton extends InputBase implements Selectable {
         super.update();
 
         var mouse = mouse();
-        boolean mouseIn = hasMouse.get();
+        boolean mouseIn = mouseIn();
         boolean leftButton = mouse.leftButton().isPressed();
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
@@ -95,7 +95,7 @@ public class TextButton extends InputBase implements Selectable {
         } else {
             press(false);
             light(mouseIn && !leftButton);
-            if(leftButtonPressEvent && mouseIn) {
+            if(leftButtonPressEvent && hasMouse.get() == HasMouse.DIRECT) {
                 select(true);
             }
         }

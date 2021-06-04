@@ -38,7 +38,7 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
     public void update() {
 
         var mouse = mouse();
-        boolean mouseIn = hasMouse.get();
+        boolean mouseIn = mouseIn();
         boolean leftButton = mouse.leftButton().isPressed();
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
@@ -69,7 +69,6 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
             boolean space = keyboard.key(Key.Code.SPACE).isPressed();
             boolean pressState = space || (mouseIn && leftButton);
             boolean tabPressEvent = false;
-            boolean spaceReleaseEvent = false;
             var kEvents = keyboard.getEvents();
             for(var e : kEvents.eachAs(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
@@ -84,24 +83,18 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
                             tabPressEvent = true;
                         }
                     }
-                    case SPACE -> {
-                        if(e.isRelease()) {
-                            spaceReleaseEvent = true;
-                        }
-                    }
                 }
             }
-            if(!pressState && (spaceReleaseEvent || (mouseIn && leftButtonReleaseEvent))) {
+            if(!pressState && (mouseIn && leftButtonReleaseEvent)) {
                 click();
             }
             press(pressState);
             light(mouseIn && !pressState);
-            select(!(tabPressEvent || (!mouseIn && leftButtonPressEvent)));
         } else {
             press(false);
             light(mouseIn && !leftButton);
-            if(leftButtonPressEvent && mouseIn) {
-                select(true);
+            if(leftButtonPressEvent && mouseIn()) {
+                selector().select(this);
             }
         }
 
@@ -121,5 +114,9 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
 
     public Var<Boolean> editable() {
         return note.editable();
+    }
+
+    public Note getNote() {
+        return note;
     }
 }
