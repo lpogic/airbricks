@@ -1,5 +1,7 @@
 package airbricks.model;
 
+import airbricks.model.selection.SelectionClient;
+import airbricks.model.selection.SelectionDealer;
 import bricks.*;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.Rectangle;
@@ -11,7 +13,7 @@ import bricks.var.impulse.State;
 import bricks.var.special.Num;
 
 
-public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangleBody {
+public class PowerBrick extends Airbrick<Host> implements Rectangle, WithRectangleBody, SelectionClient {
 
     public final Num outlineThick;
 
@@ -24,7 +26,7 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
     public final Var<Color> outlineColor;
     public final Var<Color> outlineSelectColor;
 
-    public InputBase(Host host) {
+    public PowerBrick(Host host) {
         super(host);
 
         selected = state(false, this::select);
@@ -71,7 +73,7 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
         }
     }
 
-    State<Boolean> pressed;
+    protected State<Boolean> pressed;
 
     public void press(boolean state) {
         if(pressed.get() != state) {
@@ -92,7 +94,7 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
         return pressed;
     }
 
-    State<Boolean> lighted;
+    protected State<Boolean> lighted;
 
     public void light(boolean state) {
         if(lighted.get() != state) {
@@ -113,13 +115,30 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
         return lighted;
     }
 
-    State<Boolean> selected;
+    protected State<Boolean> selected;
 
     public void select(boolean state) {
         if(state != selected.get()) {
-            selected.setState(state);
+            var selectionDealer = order(SelectionDealer.class);
+            if(state) {
+                if (selectionDealer.requestSelection(this)) {
+                    selected.setState(true);
+                }
+            } else {
+                selected.setState(false);
+            }
             updateState();
         }
+    }
+
+    @Override
+    public void depriveSelection() {
+        select(false);
+    }
+
+    @Override
+    public void requestSelection() {
+        select(true);
     }
 
     public void select() {
@@ -134,7 +153,8 @@ public class InputBase extends Airbrick<Host> implements Rectangle, WithRectangl
         return selected;
     }
 
-    Var<Number> clicked;
+    protected Var<Number> clicked;
+
     public void click() {
         clicked.set(System.currentTimeMillis());
     }

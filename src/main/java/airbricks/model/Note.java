@@ -15,7 +15,6 @@ import bricks.input.UserAction;
 import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
-import bricks.var.impulse.Impulse;
 import bricks.var.impulse.State;
 import bricks.var.special.Num;
 import bricks.var.special.NumSource;
@@ -28,15 +27,11 @@ public class Note extends Airbrick<Host> implements Rectangular {
     final NoteCars cars;
     final Var<Integer> cursorPosition;
 
-    final Impulse mousePress;
-
     public Note(Host host) {
         super(host);
 
         selected = state(false, this::select);
         editable = state(true, this::setEditable);
-
-        mousePress = mouse().leftButton().willBe(Mouse.Button::pressing);
 
         text = text();
         text.height().set(20);
@@ -70,7 +65,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
             float xOffset = font.getStringWidth(text.string().get().substring(0, pos), text.height().getFloat());
             float l = text.left().getFloat();
             return l + xOffset;
-        });
+        }, cursorPosition, text.font(), text.string(), text.height(), text.x());
         cursor.y().let(() -> {
             BackedFont font = order(FontManager.class).getFont(text.font().get(), text.height().getFloat());
             float y = text.y().getFloat();
@@ -81,11 +76,10 @@ public class Note extends Airbrick<Host> implements Rectangular {
     }
 
     public void updateCursorPosition(boolean resetCars) {
-        var mouse = mouse();
         float x = text.left().getFloat();
         int newCursorPos = order(FontManager.class).getFont(text.font().get())
                 .getCursorPosition(text.string().get(), text.height().getFloat(),
-                        x, mouse.position().x().getFloat());
+                        x, (float) input().state.mouseCursorX());
         cursorPosition.set(newCursorPos);
         cars.headIndex.set(newCursorPos);
         if(resetCars) {
@@ -97,224 +91,36 @@ public class Note extends Airbrick<Host> implements Rectangular {
     public void update() {
         super.update();
 
+        var input = input();
         if(selected.get()) {
-            boolean pressOccur = mousePress.occur();
-            var mouse = mouse();
-            if(mouse.leftButton().isPressed()) {
+            boolean pressOccur = input.getEvents().selectAs(Mouse.ButtonEvent.class).
+                    anyTrue(e -> e.button == Mouse.Button.Code.LEFT && e.isPress());
+            if(input.state.isPressed(Mouse.Button.Code.LEFT)) {
                 updateCursorPosition(pressOccur);
             }
 
-            var keyboard = keyboard();
             if(editable.get()) {
-                var charEvents = keyboard.getCharEvents();
-                if (charEvents.size() > 0) {
                     StringBuilder stringBuilder = new StringBuilder();
-                    for (var che : keyboard.getCharEvents()) {
+                    for (var che : input.getEvents().selectAs(Keyboard.CharEvent.class)) {
                         stringBuilder.appendCodePoint(che.getCodepoint());
                     }
-                    String inset = stringBuilder.toString();
-                    cut();
-                    charInset(inset);
-                    String str = text.string().get();
-                    int cursorPos = cursorPosition.get();
-                    text.string().set(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
-                    cursorPosition.set(cursorPos + inset.length());
-                }
+                    if(!stringBuilder.isEmpty()) {
+                        String inset = stringBuilder.toString();
+                        cut();
+                        charInset(inset);
+                        String str = text.string().get();
+                        int cursorPos = cursorPosition.get();
+                        text.string().set(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
+                        cursorPosition.set(cursorPos + inset.length());
+                    }
             }
 
-            var keyEvents = keyboard.getEvents();
-            if(keyEvents.size() > 0) {
-                int cursorPos = cursorPosition.get();
-                for (var e : keyEvents.eachAs(Keyboard.KeyEvent.class)) {
-                    if (e.isHold()) {
-                        if (e.key.isNumPad() && !e.isNumLocked()) {
-                            switch (e.key) {
-                                case NUM_7_HOME -> {
-                                    if(cars.isAny()) {
-                                        if(e.isShifted()) {
-                                            cars.headIndex.set(0);
-                                        } else {
-                                            cars.reset();
-                                        }
-                                    } else {
-                                        if(e.isShifted()) {
-                                            cars.tailIndex.set(cursorPos);
-                                            cars.headIndex.set(0);
-                                        }
-                                    }
-                                    cursorPosition.set(0);
-                                }
-                                case NUM_1_END -> {
-                                    if(cars.isAny()) {
-                                        if(e.isShifted()) {
-                                            cars.headIndex.set(text.string().get().length());
-                                        } else {
-                                            cars.reset();
-                                        }
-                                    } else {
-                                        if(e.isShifted()) {
-                                            cars.tailIndex.set(cursorPos);
-                                            cars.headIndex.set(text.string().get().length());
-                                        }
-                                    }
-                                    cursorPosition.set(text.string().get().length());
-                                }
-                                case NUM_0_INSERT -> {
-                                    if(!editable.get()) break;
-                                    String clip = clipboard().get();
-                                    NoteCars.MinMax minMax;
-                                    if(cars.isAny()) {
-                                        minMax = cars.getMinMax();
-                                    } else {
-                                        minMax = new NoteCars.MinMax(cursorPos, cursorPos);
-                                    }
-                                    String str = text.string().get();
-                                    text.string().set(str.substring(0, minMax.min()) +
-                                            clip +
-                                            str.substring(minMax.max()));
-                                    cursorPosition.set(cursorPos + clip.length());
-                                }
-                                case NUM_DECIMAL_DELETE -> {
-                                    if(!editable.get()) break;
-                                    String cut = cut();
-                                    if(cut.isEmpty()) {
-                                        String str = text.string().get();
-                                        if (cursorPos < str.length()) {
-                                            charErase(false);
-                                            text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
-                                        }
-                                    }
-                                }
-                            }
-                        }
+            int cursorPos = cursorPosition.get();
+            for (var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
+                if (e.isHold()) {
+                    if (e.key.isNumPad() && !e.isNumLocked()) {
                         switch (e.key) {
-                            case BACKSPACE -> {
-                                if(!editable.get()) break;
-                                String cut = cut();
-                                if(cut.isEmpty()) {
-                                    if (cursorPos > 0) {
-                                        charErase(true);
-                                        String str = text.string().get();
-                                        text.string().set(str.substring(0, cursorPos - 1) + str.substring(cursorPos));
-                                        cursorPosition.set(cursorPos - 1);
-                                    }
-                                }
-                                cars.reset();
-                            }
-                            case DELETE -> {
-                                if(!editable.get()) break;
-                                String cut = cut();
-                                if(cut.isEmpty()) {
-                                    String str = text.string().get();
-                                    if (cursorPos < str.length()) {
-                                        charErase(false);
-                                        text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
-                                    }
-                                }
-                            }
-                            case LEFT -> {
-                                int head = cars.getHead();
-                                int tail = cars.getTail();
-                                if(e.isShifted()) {
-                                    if(e.isControlled()) {
-                                        if(e.isAltered()) {
-                                            if(tail < head) {
-                                                cars.tailIndex.set(head);
-                                                cars.headIndex.set(tail);
-                                                cursorPosition.set(tail);
-                                            }
-                                        } else {
-                                            if (cursorPos > 0) {
-                                                int jump = ctrlJump(cursorPos, true);
-                                                if(!cars.isAny()) {
-                                                    cars.tailIndex.set(cursorPos);
-                                                }
-                                                cars.headIndex.set(cursorPos - jump);
-                                                cursorPosition.set(cursorPos - jump);
-                                            }
-                                        }
-                                    } else {
-                                        if (!cars.isAny()) {
-                                            cars.tailIndex.set(cursorPos);
-                                        }
-                                        if (cursorPos > 0) {
-                                            cars.headIndex.set(cursorPos - 1);
-                                            cursorPosition.set(cursorPos - 1);
-                                        }
-                                    }
-                                } else {
-                                    if(e.isControlled()) {
-                                        if (cursorPos > 0) {
-                                            if (cars.isAny()) {
-                                                cars.reset();
-                                            }
-                                            int jump = ctrlJump(cursorPos, true);
-                                            cursorPosition.set(cursorPos - jump);
-                                        }
-                                    } else {
-                                        if (cars.isAny()) {
-                                            cursorPosition.set(cars.getMinIndex());
-                                            cars.reset();
-                                        } else {
-                                            if (cursorPos > 0) {
-                                                cursorPosition.set(cursorPos - 1);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            case RIGHT -> {
-                                int head = cars.getHead();
-                                int tail = cars.getTail();
-                                if(e.isShifted()) {
-                                    if(e.isControlled()) {
-                                        if(e.isAltered()) {
-                                            if(tail > head) {
-                                                cars.tailIndex.set(head);
-                                                cursorPosition.set(tail);
-                                                cars.headIndex.set(tail);
-                                            }
-                                        } else {
-                                            if (cursorPos < text.string().get().length()) {
-                                                int jump = ctrlJump(cursorPos, false);
-                                                if(!cars.isAny()) {
-                                                    cars.tailIndex.set(cursorPos);
-                                                }
-                                                cars.headIndex.set(cursorPos + jump);
-                                                cursorPosition.set(cursorPos + jump);
-                                            }
-                                        }
-                                    } else {
-                                        if (!cars.isAny()) {
-                                            cars.tailIndex.set(cursorPos);
-                                        }
-                                        if (cursorPos < text.string().get().length()) {
-                                            cursorPosition.set(cursorPos + 1);
-                                            cars.headIndex.set(cursorPos + 1);
-                                        }
-                                    }
-                                } else {
-                                    if(e.isControlled()) {
-                                        if (cursorPos < text.string().get().length()) {
-                                            if (cars.isAny()) {
-                                                cars.reset();
-                                            }
-                                            int jump = ctrlJump(cursorPos, false);
-                                            cursorPosition.set(cursorPos + jump);
-                                        }
-                                    } else {
-                                        if (cars.isAny()) {
-                                            cursorPosition.set(cars.getMaxIndex());
-                                            cars.reset();
-                                        } else {
-                                            if (cursorPos < text.string().get().length()) {
-                                                cursorPosition.set(cursorPos + 1);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            case HOME -> {
+                            case NUM_7_HOME -> {
                                 if(cars.isAny()) {
                                     if(e.isShifted()) {
                                         cars.headIndex.set(0);
@@ -329,7 +135,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 }
                                 cursorPosition.set(0);
                             }
-                            case END -> {
+                            case NUM_1_END -> {
                                 if(cars.isAny()) {
                                     if(e.isShifted()) {
                                         cars.headIndex.set(text.string().get().length());
@@ -344,80 +150,264 @@ public class Note extends Airbrick<Host> implements Rectangular {
                                 }
                                 cursorPosition.set(text.string().get().length());
                             }
-                            case CAPS_LOCK -> {
+                            case NUM_0_INSERT -> {
                                 if(!editable.get()) break;
+                                String clip = clipboard().get();
+                                NoteCars.MinMax minMax;
                                 if(cars.isAny()) {
-                                    caps(e.isCapsLocked());
+                                    minMax = cars.getMinMax();
+                                } else {
+                                    minMax = new NoteCars.MinMax(cursorPos, cursorPos);
+                                }
+                                String str = text.string().get();
+                                text.string().set(str.substring(0, minMax.min()) +
+                                        clip +
+                                        str.substring(minMax.max()));
+                                cursorPosition.set(cursorPos + clip.length());
+                            }
+                            case NUM_DECIMAL_DELETE -> {
+                                if(!editable.get()) break;
+                                String cut = cut();
+                                if(cut.isEmpty()) {
+                                    String str = text.string().get();
+                                    if (cursorPos < str.length()) {
+                                        charErase(false);
+                                        text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
+                                    }
                                 }
                             }
-                            case INSERT -> {
-                                if(!editable.get()) break;
+                        }
+                    }
+                    switch (e.key) {
+                        case BACKSPACE -> {
+                            if(!editable.get()) break;
+                            String cut = cut();
+                            if(cut.isEmpty()) {
+                                if (cursorPos > 0) {
+                                    charErase(true);
+                                    String str = text.string().get();
+                                    text.string().set(str.substring(0, cursorPos - 1) + str.substring(cursorPos));
+                                    cursorPosition.set(cursorPos - 1);
+                                }
+                            }
+                            cars.reset();
+                        }
+                        case DELETE -> {
+                            if(!editable.get()) break;
+                            String cut = cut();
+                            if(cut.isEmpty()) {
+                                String str = text.string().get();
+                                if (cursorPos < str.length()) {
+                                    charErase(false);
+                                    text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
+                                }
+                            }
+                        }
+                        case LEFT -> {
+                            int head = cars.getHead();
+                            int tail = cars.getTail();
+                            if(e.isShifted()) {
+                                if(e.isControlled()) {
+                                    if(e.isAltered()) {
+                                        if(tail < head) {
+                                            cars.tailIndex.set(head);
+                                            cars.headIndex.set(tail);
+                                            cursorPosition.set(tail);
+                                        }
+                                    } else {
+                                        if (cursorPos > 0) {
+                                            int jump = ctrlJump(cursorPos, true);
+                                            if(!cars.isAny()) {
+                                                cars.tailIndex.set(cursorPos);
+                                            }
+                                            cars.headIndex.set(cursorPos - jump);
+                                            cursorPosition.set(cursorPos - jump);
+                                        }
+                                    }
+                                } else {
+                                    if (!cars.isAny()) {
+                                        cars.tailIndex.set(cursorPos);
+                                    }
+                                    if (cursorPos > 0) {
+                                        cars.headIndex.set(cursorPos - 1);
+                                        cursorPosition.set(cursorPos - 1);
+                                    }
+                                }
+                            } else {
+                                if(e.isControlled()) {
+                                    if (cursorPos > 0) {
+                                        if (cars.isAny()) {
+                                            cars.reset();
+                                        }
+                                        int jump = ctrlJump(cursorPos, true);
+                                        cursorPosition.set(cursorPos - jump);
+                                    }
+                                } else {
+                                    if (cars.isAny()) {
+                                        cursorPosition.set(cars.getMinIndex());
+                                        cars.reset();
+                                    } else {
+                                        if (cursorPos > 0) {
+                                            cursorPosition.set(cursorPos - 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        case RIGHT -> {
+                            int head = cars.getHead();
+                            int tail = cars.getTail();
+                            if(e.isShifted()) {
+                                if(e.isControlled()) {
+                                    if(e.isAltered()) {
+                                        if(tail > head) {
+                                            cars.tailIndex.set(head);
+                                            cursorPosition.set(tail);
+                                            cars.headIndex.set(tail);
+                                        }
+                                    } else {
+                                        if (cursorPos < text.string().get().length()) {
+                                            int jump = ctrlJump(cursorPos, false);
+                                            if(!cars.isAny()) {
+                                                cars.tailIndex.set(cursorPos);
+                                            }
+                                            cars.headIndex.set(cursorPos + jump);
+                                            cursorPosition.set(cursorPos + jump);
+                                        }
+                                    }
+                                } else {
+                                    if (!cars.isAny()) {
+                                        cars.tailIndex.set(cursorPos);
+                                    }
+                                    if (cursorPos < text.string().get().length()) {
+                                        cursorPosition.set(cursorPos + 1);
+                                        cars.headIndex.set(cursorPos + 1);
+                                    }
+                                }
+                            } else {
+                                if(e.isControlled()) {
+                                    if (cursorPos < text.string().get().length()) {
+                                        if (cars.isAny()) {
+                                            cars.reset();
+                                        }
+                                        int jump = ctrlJump(cursorPos, false);
+                                        cursorPosition.set(cursorPos + jump);
+                                    }
+                                } else {
+                                    if (cars.isAny()) {
+                                        cursorPosition.set(cars.getMaxIndex());
+                                        cars.reset();
+                                    } else {
+                                        if (cursorPos < text.string().get().length()) {
+                                            cursorPosition.set(cursorPos + 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        case HOME -> {
+                            if(cars.isAny()) {
+                                if(e.isShifted()) {
+                                    cars.headIndex.set(0);
+                                } else {
+                                    cars.reset();
+                                }
+                            } else {
+                                if(e.isShifted()) {
+                                    cars.tailIndex.set(cursorPos);
+                                    cars.headIndex.set(0);
+                                }
+                            }
+                            cursorPosition.set(0);
+                        }
+                        case END -> {
+                            if(cars.isAny()) {
+                                if(e.isShifted()) {
+                                    cars.headIndex.set(text.string().get().length());
+                                } else {
+                                    cars.reset();
+                                }
+                            } else {
+                                if(e.isShifted()) {
+                                    cars.tailIndex.set(cursorPos);
+                                    cars.headIndex.set(text.string().get().length());
+                                }
+                            }
+                            cursorPosition.set(text.string().get().length());
+                        }
+                        case CAPS_LOCK -> {
+                            if(!editable.get()) break;
+                            if(cars.isAny()) {
+                                caps(e.isCapsLocked());
+                            }
+                        }
+                        case INSERT -> {
+                            if(!editable.get()) break;
+                            String clip = clipboard().get();
+                            if(!clip.isEmpty()) {
+                                paste(clip);
+                                cars.reset();
+                            }
+                        }
+                        case X -> {
+                            if(!editable.get()) break;
+                            if(e.isControlled() && !e.isAltered()) {
+                                String cut = cut();
+                                if(!cut.isEmpty()) clipboard().set(cut);
+                            }
+                        }
+                        case C -> {
+                            if(e.isControlled() && !e.isAltered()) {
+                                String copy = copy();
+                                if(!copy.isEmpty()) {
+                                    clipboard().set(copy);
+                                }
+                            }
+                        }
+                        case V -> {
+                            if(!editable.get()) break;
+                            if(e.isControlled() && !e.isAltered()) {
                                 String clip = clipboard().get();
                                 if(!clip.isEmpty()) {
                                     paste(clip);
                                     cars.reset();
                                 }
                             }
-                            case X -> {
-                                if(!editable.get()) break;
-                                if(e.isControlled() && !e.isAltered()) {
-                                    String cut = cut();
-                                    if(!cut.isEmpty()) clipboard().set(cut);
-                                }
-                            }
-                            case C -> {
-                                if(e.isControlled() && !e.isAltered()) {
-                                    String copy = copy();
-                                    if(!copy.isEmpty()) {
-                                        clipboard().set(copy);
-                                    }
-                                }
-                            }
-                            case V -> {
-                                if(!editable.get()) break;
-                                if(e.isControlled() && !e.isAltered()) {
-                                    String clip = clipboard().get();
-                                    if(!clip.isEmpty()) {
-                                        paste(clip);
-                                        cars.reset();
-                                    }
-                                }
-                            }
-                            case B -> {
-                                if(!editable.get()) break;
-                                if(e.isControlled() && !e.isAltered()) {
-                                    String cut = cut();
-                                    String clip = clipboard().get();
-                                    if(!clip.isEmpty()) {
-                                        paste(clip);
-                                        cars.reset();
-                                    }
-                                    if(!cut.isEmpty()) clipboard().set(cut);
-                                }
-                            }
-                            case Z -> {
-                                if(!editable.get()) break;
-                                if(e.isControlled() && !e.isAltered()) {
-                                    Story story = story();
-                                    pushOpenUserAction();
-                                    if(e.isShifted()) {
-                                        story.front();
-                                    } else {
-                                        story.back();
-                                    }
-                                }
-                            }
-                            case A -> {
-                                if(e.isControlled() && !e.isAltered()) {
-                                    cursorPosition.set(text.string().get().length());
-                                    cars.headIndex.set(text.string().get().length());
-                                    cars.tailIndex.set(0);
-                                }
-                            }
-                            case ESCAPE -> {
-                                if(cars.isAny()) {
+                        }
+                        case B -> {
+                            if(!editable.get()) break;
+                            if(e.isControlled() && !e.isAltered()) {
+                                String cut = cut();
+                                String clip = clipboard().get();
+                                if(!clip.isEmpty()) {
+                                    paste(clip);
                                     cars.reset();
                                 }
+                                if(!cut.isEmpty()) clipboard().set(cut);
+                            }
+                        }
+                        case Z -> {
+                            if(!editable.get()) break;
+                            if(e.isControlled() && !e.isAltered()) {
+                                Story story = story();
+                                pushOpenUserAction();
+                                if(e.isShifted()) {
+                                    story.front();
+                                } else {
+                                    story.back();
+                                }
+                            }
+                        }
+                        case A -> {
+                            if(e.isControlled() && !e.isAltered()) {
+                                cursorPosition.set(text.string().get().length());
+                                cars.headIndex.set(text.string().get().length());
+                                cars.tailIndex.set(0);
+                            }
+                        }
+                        case ESCAPE -> {
+                            if(cars.isAny()) {
+                                cars.reset();
                             }
                         }
                     }
@@ -745,7 +735,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
     final State<Boolean> editable;
     public void setEditable(boolean state) {
         if(editable.get() != state) {
-            editable.set(state);
+            editable.setState(state);
             updateState();
         }
     }

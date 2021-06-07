@@ -1,8 +1,9 @@
 package airbricks.model.button;
 
-import airbricks.model.InputBase;
-import airbricks.model.Selectable;
+import airbricks.model.PowerBrick;
+import airbricks.model.selection.SelectionClient;
 import bricks.Color;
+import bricks.Coordinated;
 import bricks.Sized;
 import bricks.graphic.ColorText;
 import bricks.input.Key;
@@ -13,15 +14,15 @@ import bricks.var.Var;
 
 import static suite.suite.$.set$;
 
-public class TextButton extends InputBase implements Selectable {
+public class TextPowerButton extends PowerBrick implements SelectionClient {
 
     public final ColorText text;
 
-    public TextButton(Host host) {
+    public TextPowerButton(Host host) {
         super(host);
 
         text = text();
-        text.color().set(Color.hex("#104bf1"));
+        text.color().set(Color.hex("#1d100e0"));
         text.aim(this);
 
         adjust(Sized.relative(text, 40, 20));
@@ -32,13 +33,12 @@ public class TextButton extends InputBase implements Selectable {
     public void update() {
         super.update();
 
-        var mouse = mouse();
+        var input = input();
         boolean mouseIn = mouseIn();
-        boolean leftButton = mouse.leftButton().isPressed();
+        boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
-        var mEvents = mouse.getEvents();
-        for(var e : mEvents.eachAs(Mouse.ButtonEvent.class)) {
+        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
             switch (e.button) {
                 case LEFT -> {
                     if(e.isPress()) {
@@ -59,18 +59,15 @@ public class TextButton extends InputBase implements Selectable {
         }
 
         if (selected().get()) {
-            var keyboard = keyboard();
-            if(mouseIn) mouseIn = contains(mouse.position());
-            boolean space = keyboard.key(Key.Code.SPACE).isPressed();
+            if(mouseIn) mouseIn = contains(Coordinated.of(input.state.mouseCursorX(), input.state.mouseCursorY()));
+            boolean space = input.state.isPressed(Key.Code.SPACE);
             boolean pressState = space || (mouseIn && leftButton);
             boolean tabPressEvent = false;
             boolean spaceReleaseEvent = false;
-            var kEvents = keyboard.getEvents();
-            for(var e : kEvents.eachAs(Keyboard.KeyEvent.class)) {
+            for(var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
                     case TAB -> {
                         if(e.isHold()) {
-                            kEvents.unset(e);
                             if(e.isShifted()) {
                                 order(set$("selectPrev", this));
                             } else {

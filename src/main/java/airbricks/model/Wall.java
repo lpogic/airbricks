@@ -1,5 +1,11 @@
 package airbricks.model;
 
+import airbricks.model.button.TextPowerButton;
+import airbricks.model.assistance.AssistanceDealer;
+import airbricks.model.assistance.ExclusiveAssistanceDealer;
+import airbricks.model.selection.ExclusiveSelectionDealer;
+import airbricks.model.selection.SelectionClient;
+import airbricks.model.selection.SelectionDealer;
 import bricks.Color;
 import bricks.input.Mouse;
 import bricks.var.Var;
@@ -14,7 +20,7 @@ import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.opengl.GL11.*;
 import static suite.suite.$.set$;
 
-public abstract class Wall extends bricks.wall.Wall implements Airbricklayer, Selectable {
+public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
 
     static Subject $walls = set$();
 
@@ -81,39 +87,62 @@ public abstract class Wall extends bricks.wall.Wall implements Airbricklayer, Se
         $resources
                 .put(Wall.class, this)
                 .put(bricks.wall.Wall.class, this)
-                .put(Selector.class, new Selector());
+                .put(SelectionDealer.class, new ExclusiveSelectionDealer())
+                .put(AssistanceDealer.class, new ExclusiveAssistanceDealer(this));
     }
 
     @Override
     public void update() {
 
-        var mouse = mouse();
-        boolean mouseIn = hasMouse.get() == HasMouse.DIRECT;
+        boolean mouseIn = mouseIn(true);
         boolean leftButtonPressEvent = false;
-        var mEvents = mouse.getEvents();
-        for(var e : mEvents.eachAs(Mouse.ButtonEvent.class)) {
-            switch (e.button) {
-                case LEFT -> {
-                    if(e.isPress()) {
-                        leftButtonPressEvent = true;
-                    }
-                }
+        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
+            if(e.button == Mouse.Button.Code.LEFT && e.isPress()) {
+                leftButtonPressEvent = true;
             }
         }
 
         if(leftButtonPressEvent && mouseIn) {
-            selector().select(this);
+            order(SelectionDealer.class).requestSelection(this);
         }
 
         super.update();
     }
 
-    public Selector selector() {
-        return order(Selector.class);
-    }
-
     @Override
     public Var<Boolean> selected() {
         return Vars.set(false);
+    }
+
+    @Override
+    public void depriveSelection() {}
+
+    @Override
+    public void requestSelection() {
+        order(SelectionDealer.class).requestSelection(this);
+    }
+
+    protected TextPowerButton button() {
+        return new TextPowerButton(this);
+    }
+
+    protected TextPowerButton button(String text) {
+        var button = button();
+        button.string().set(text);
+        return button;
+    }
+
+    protected Note note() {
+        return new Note(this);
+    }
+
+    protected Note note(String text) {
+        var note = note();
+        note.string().set(text);
+        return note;
+    }
+
+    protected Intercom intercom() {
+        return new Intercom(this);
     }
 }

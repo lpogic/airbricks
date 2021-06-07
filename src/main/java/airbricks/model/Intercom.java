@@ -1,5 +1,7 @@
 package airbricks.model;
 
+import airbricks.model.selection.SelectionClient;
+import bricks.Coordinated;
 import bricks.Sized;
 import bricks.graphic.Rectangle;
 import bricks.input.Key;
@@ -12,13 +14,13 @@ import suite.suite.Subject;
 
 import static suite.suite.$.set$;
 
-public class NoteInput extends InputBase implements Rectangle, Selectable {
+public class Intercom extends PowerBrick implements Rectangle, SelectionClient {
 
     protected Note note;
 
     private final Story story;
 
-    public NoteInput(Host host) {
+    public Intercom(Host host) {
         super(host);
 
         note = note();
@@ -37,13 +39,12 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
 
     public void update() {
 
-        var mouse = mouse();
+        var input = input();
         boolean mouseIn = mouseIn();
-        boolean leftButton = mouse.leftButton().isPressed();
+        boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
-        var mEvents = mouse.getEvents();
-        for(var e : mEvents.eachAs(Mouse.ButtonEvent.class)) {
+        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
             switch (e.button) {
                 case LEFT -> {
                     if(e.isPress()) {
@@ -64,23 +65,18 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
         }
 
         if (selected().get()) {
-            var keyboard = keyboard();
-            if(mouseIn) mouseIn = contains(mouse.position());
-            boolean space = keyboard.key(Key.Code.SPACE).isPressed();
+            if(mouseIn) mouseIn = contains(Coordinated.of(input.state.mouseCursorX(), input.state.mouseCursorY()));
+            boolean space = input.state.isPressed(Key.Code.SPACE);
             boolean pressState = space || (mouseIn && leftButton);
-            boolean tabPressEvent = false;
-            var kEvents = keyboard.getEvents();
-            for(var e : kEvents.eachAs(Keyboard.KeyEvent.class)) {
+            for(var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
                     case TAB -> {
                         if(e.isHold()) {
-                            kEvents.unset(e);
                             if(e.isShifted()) {
                                 order(set$("selectPrev", this));
                             } else {
                                 order(set$("selectNext", this));
                             }
-                            tabPressEvent = true;
                         }
                     }
                 }
@@ -94,7 +90,7 @@ public class NoteInput extends InputBase implements Rectangle, Selectable {
             press(false);
             light(mouseIn && !leftButton);
             if(leftButtonPressEvent && mouseIn()) {
-                selector().select(this);
+                select();
             }
         }
 

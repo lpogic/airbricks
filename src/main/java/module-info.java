@@ -9,5 +9,6 @@ open module airbricks {
 
     exports airbricks.model;
     exports airbricks.model.button;
-    exports airbricks.model.prompt;
+    exports airbricks.model.assistance;
+    exports airbricks.model.selection;
 }

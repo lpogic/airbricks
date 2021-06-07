@@ -1,47 +1,33 @@
-package airbricks.model.prompt;
+package airbricks.model.assistance;
 
 import airbricks.model.Airbrick;
-import airbricks.model.InputBase;
+import airbricks.model.PowerBrick;
 import airbricks.model.Int;
 import airbricks.model.WithRectangleBody;
-import airbricks.model.button.OptionButton;
-import airbricks.model.button.TextButton;
-import bricks.Color;
+import airbricks.model.button.OptionPowerButton;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.Rectangle;
-import bricks.graphic.Rectangular;
-import bricks.input.Key;
-import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
-import bricks.var.impulse.State;
-import bricks.var.special.NumSource;
 import bricks.wall.Brick;
 import bricks.wall.FantomBrick;
-import suite.suite.$;
-import suite.suite.Subject;
-import suite.suite.Suite;
-import suite.suite.action.Statement;
 
 import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 
 import static suite.suite.$.set$;
 
-public class Prompt extends Airbrick<Host> implements WithRectangleBody {
+public class Assistance extends Airbrick<Host> implements WithRectangleBody {
 
     ColorRectangle bg;
-    List<OptionButton> buttons;
+    List<OptionPowerButton> buttons;
     FantomBrick buttonsBrick;
     List<String> options;
     int offset;
 
-    public Prompt(Host host) {
+    public Assistance(Host host) {
         super(host);
 
         picked = Vars.get();
@@ -50,9 +36,9 @@ public class Prompt extends Airbrick<Host> implements WithRectangleBody {
 
         buttons = new ArrayList<>();
 
-        OptionButton prevButton = null;
+        OptionPowerButton prevButton = null;
         for(int i = 0;i < 6; ++i) {
-            var button = new OptionButton(this);
+            var button = new OptionPowerButton(this);
             button.width().let(bg.width());
             button.x().let(bg.x());
             if(i == 0) {
@@ -82,7 +68,7 @@ public class Prompt extends Airbrick<Host> implements WithRectangleBody {
     }
 
     public void select(int i) {
-        buttons.get(i).select();
+        buttons.get(i).light();
     }
 
     public void setOptions(List<String> options) {
@@ -111,15 +97,11 @@ public class Prompt extends Airbrick<Host> implements WithRectangleBody {
         bg.width().let(brick.width());
     }
 
-    public void attach(InputBase input, List<String> options) {
+    public void attach(PowerBrick input, List<String> options) {
         attach(input);
         setOptions(options);
         resetOffset();
         updateButtons();
-        Statement push = () -> wall().push(this);
-        input.when(input.selected(), push, () -> wall().pop(this));
-        input.when(input.clicked(), push);
-        input.when(keyboard().key(Key.Code.DOWN).willBe(Key.Event::isPress), () -> wall().push(this));
     }
 
     @Override
@@ -130,12 +112,11 @@ public class Prompt extends Airbrick<Host> implements WithRectangleBody {
     @Override
     public void update() {
 
-        var mouse = mouse();
+        var input = input();
         boolean mouseIn = mouseIn();
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
-        var mEvents = mouse.getEvents();
-        for(var e : mEvents.eachAs(Mouse.ButtonEvent.class)) {
+        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
             switch (e.button) {
                 case LEFT -> {
                     if(e.isPress()) {
