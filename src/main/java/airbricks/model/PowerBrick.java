@@ -13,7 +13,7 @@ import bricks.var.impulse.State;
 import bricks.var.special.Num;
 
 
-public class PowerBrick extends Airbrick<Host> implements Rectangle, WithRectangleBody, SelectionClient {
+public abstract class PowerBrick<H extends Host> extends Airbrick<H> implements Rectangle, WithRectangleBody, SelectionClient {
 
     public final Num outlineThick;
 
@@ -26,7 +26,7 @@ public class PowerBrick extends Airbrick<Host> implements Rectangle, WithRectang
     public final Var<Color> outlineColor;
     public final Var<Color> outlineSelectColor;
 
-    public PowerBrick(Host host) {
+    public PowerBrick(H host) {
         super(host);
 
         selected = state(false, this::select);

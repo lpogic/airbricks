@@ -88,12 +88,11 @@ public class Note extends Airbrick<Host> implements Rectangular {
     }
 
     @Override
-    public void update() {
-        super.update();
+    public void frontUpdate() {
 
         var input = input();
         if(selected.get()) {
-            boolean pressOccur = input.getEvents().selectAs(Mouse.ButtonEvent.class).
+            boolean pressOccur = input.getEvents().filter(Mouse.ButtonEvent.class).
                     anyTrue(e -> e.button == Mouse.Button.Code.LEFT && e.isPress());
             if(input.state.isPressed(Mouse.Button.Code.LEFT)) {
                 updateCursorPosition(pressOccur);
@@ -101,7 +100,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
 
             if(editable.get()) {
                     StringBuilder stringBuilder = new StringBuilder();
-                    for (var che : input.getEvents().selectAs(Keyboard.CharEvent.class)) {
+                    for (var che : input.getEvents().filter(Keyboard.CharEvent.class)) {
                         stringBuilder.appendCodePoint(che.getCodepoint());
                     }
                     if(!stringBuilder.isEmpty()) {
@@ -116,7 +115,7 @@ public class Note extends Airbrick<Host> implements Rectangular {
             }
 
             int cursorPos = cursorPosition.get();
-            for (var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
+            for (var e : input.getEvents().filter(Keyboard.KeyEvent.class)) {
                 if (e.isHold()) {
                     if (e.key.isNumPad() && !e.isNumLocked()) {
                         switch (e.key) {

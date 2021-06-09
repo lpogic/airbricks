@@ -14,7 +14,7 @@ import suite.suite.Subject;
 
 import static suite.suite.$.set$;
 
-public class Intercom extends PowerBrick implements Rectangle, SelectionClient {
+public class Intercom extends PowerBrick<Host> implements Rectangle, SelectionClient {
 
     protected Note note;
 
@@ -37,14 +37,15 @@ public class Intercom extends PowerBrick implements Rectangle, SelectionClient {
         $bricks.set(note);
     }
 
-    public void update() {
+    @Override
+    public void frontUpdate() {
 
         var input = input();
         boolean mouseIn = mouseIn();
         boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
-        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
+        for(var e : input.getEvents().filter(Mouse.ButtonEvent.class)) {
             switch (e.button) {
                 case LEFT -> {
                     if(e.isPress()) {
@@ -59,16 +60,16 @@ public class Intercom extends PowerBrick implements Rectangle, SelectionClient {
 
         var wall = wall();
         if(leftButtonPressEvent && mouseIn) {
-            wall.lockMouse(this);
-        } else if(leftButtonReleaseEvent && wall.mouseLocked()) {
-            wall.unlockMouse();
+            wall.trapMouse(this);
+        } else if(leftButtonReleaseEvent && wall.mouseTrappedBy(this)) {
+            wall.freeMouse();
         }
 
         if (selected().get()) {
             if(mouseIn) mouseIn = contains(Coordinated.of(input.state.mouseCursorX(), input.state.mouseCursorY()));
             boolean space = input.state.isPressed(Key.Code.SPACE);
             boolean pressState = space || (mouseIn && leftButton);
-            for(var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
+            for(var e : input.getEvents().filter(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
                     case TAB -> {
                         if(e.isHold()) {
@@ -93,8 +94,6 @@ public class Intercom extends PowerBrick implements Rectangle, SelectionClient {
                 select();
             }
         }
-
-        super.update();
     }
 
     public Subject order(Subject $) {

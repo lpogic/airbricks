@@ -1,11 +1,13 @@
 package airbricks.model.button;
 
 import airbricks.model.PowerBrick;
+import airbricks.model.assistance.Assistance;
 import airbricks.model.selection.SelectionClient;
 import bricks.Color;
 import bricks.Coordinated;
 import bricks.Sized;
 import bricks.graphic.ColorText;
+import bricks.input.InputEvent;
 import bricks.input.Key;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
@@ -14,11 +16,11 @@ import bricks.var.Var;
 
 import static suite.suite.$.set$;
 
-public class OptionPowerButton extends PowerBrick implements SelectionClient {
+public class OptionPowerButton extends PowerBrick<Assistance> implements SelectionClient {
 
     public final ColorText text;
 
-    public OptionPowerButton(Host host) {
+    public OptionPowerButton(Assistance host) {
         super(host);
 
         text = text();
@@ -32,64 +34,30 @@ public class OptionPowerButton extends PowerBrick implements SelectionClient {
         $bricks.set(text);
     }
 
+    boolean pressedIn = false;
+
     @Override
-    public void update() {
-        super.update();
+    public void frontUpdate() {
 
         var input = input();
         boolean mouseIn = mouseIn();
-        boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
-        boolean leftButtonPressEvent = false;
-        boolean leftButtonReleaseEvent = false;
-        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
-            switch (e.button) {
-                case LEFT -> {
-                    if(e.isPress()) {
-                        leftButtonPressEvent = true;
-                    }
-                    if(e.isRelease()) {
-                        leftButtonReleaseEvent = true;
+        for(var e : input.getEvents()) {
+            if(e instanceof Mouse.PositionEvent positionEvent) {
+                if(mouseIn) light(host.requestLight(this));
+            } else if(e instanceof Mouse.ButtonEvent buttonEvent) {
+                if(buttonEvent.button == Mouse.Button.Code.LEFT) {
+                    if(buttonEvent.isPress()) {
+                        pressedIn = mouseIn;
+                    } else if(buttonEvent.isRelease()) {
+                        if(pressedIn && mouseIn) click();
                     }
                 }
-            }
-        }
-
-        if (selected().get()) {
-            if(mouseIn) mouseIn = contains(Coordinated.of(input.state.mouseCursorX(), input.state.mouseCursorY()));
-            boolean space = input.state.isPressed(Key.Code.SPACE);
-            boolean pressState = space || (mouseIn && leftButton);
-            boolean tabPressEvent = false;
-            boolean spaceReleaseEvent = false;
-            for(var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
-                switch (e.key) {
-                    case TAB -> {
-                        if(e.isHold()) {
-                            if(e.isShifted()) {
-                                order(set$("selectPrev", this));
-                            } else {
-                                order(set$("selectNext", this));
-                            }
-                            tabPressEvent = true;
-                        }
-                    }
-                    case SPACE -> {
-                        if(e.isRelease()) {
-                            spaceReleaseEvent = true;
-                        }
+            } else if(e instanceof Keyboard.KeyEvent keyEvent) {
+                if(keyEvent.key == Key.Code.ENTER) {
+                    if(keyEvent.isPress()) {
+                        if(lighted.get()) click();
                     }
                 }
-            }
-            if(!pressState && (spaceReleaseEvent || (mouseIn && leftButtonReleaseEvent))) {
-                click();
-            }
-            press(pressState);
-            light(mouseIn && !pressState);
-            select(!(tabPressEvent || (!mouseIn && leftButtonPressEvent)));
-        } else {
-            press(false);
-            light(mouseIn && !leftButton);
-            if(leftButton && hasMouse.get() == HasMouse.DIRECT) {
-                select(true);
             }
         }
     }

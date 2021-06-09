@@ -14,7 +14,7 @@ import bricks.var.Var;
 
 import static suite.suite.$.set$;
 
-public class TextPowerButton extends PowerBrick implements SelectionClient {
+public class TextPowerButton extends PowerBrick<Host> implements SelectionClient {
 
     public final ColorText text;
 
@@ -30,15 +30,15 @@ public class TextPowerButton extends PowerBrick implements SelectionClient {
         $bricks.set(text);
     }
 
-    public void update() {
-        super.update();
+    @Override
+    public void frontUpdate() {
 
         var input = input();
         boolean mouseIn = mouseIn();
         boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
-        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
+        for(var e : input.getEvents().filter(Mouse.ButtonEvent.class)) {
             switch (e.button) {
                 case LEFT -> {
                     if(e.isPress()) {
@@ -53,9 +53,9 @@ public class TextPowerButton extends PowerBrick implements SelectionClient {
 
         var wall = wall();
         if(leftButtonPressEvent && mouseIn) {
-            wall.lockMouse(this);
-        } else if(leftButtonReleaseEvent && wall.mouseLocked()) {
-            wall.unlockMouse();
+            wall.trapMouse(this);
+        } else if(leftButtonReleaseEvent && wall.mouseTrappedBy(this)) {
+            wall.freeMouse();
         }
 
         if (selected().get()) {
@@ -64,7 +64,7 @@ public class TextPowerButton extends PowerBrick implements SelectionClient {
             boolean pressState = space || (mouseIn && leftButton);
             boolean tabPressEvent = false;
             boolean spaceReleaseEvent = false;
-            for(var e : input.getEvents().selectAs(Keyboard.KeyEvent.class)) {
+            for(var e : input.getEvents().filter(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
                     case TAB -> {
                         if(e.isHold()) {

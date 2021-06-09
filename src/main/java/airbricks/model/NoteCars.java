@@ -49,6 +49,11 @@ public class NoteCars extends Airbrick<Note> {
         $bricks.set(body);
     }
 
+    @Override
+    protected void frontUpdate() {
+
+    }
+
     String substr(String str, int begin, int end) {
         int len = str.length();
         if(begin > len) return str;

@@ -7,12 +7,15 @@ import airbricks.model.WithRectangleBody;
 import airbricks.model.button.OptionPowerButton;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.Rectangle;
+import bricks.input.Key;
+import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.wall.Brick;
 import bricks.wall.FantomBrick;
+import suite.suite.Subject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,12 +30,16 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
     List<String> options;
     int offset;
 
+    boolean wrapped;
+
     public Assistance(Host host) {
         super(host);
 
         picked = Vars.get();
 
         bg = rect();
+
+        wrapped = false;
 
         buttons = new ArrayList<>();
 
@@ -67,8 +74,41 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
         return picked;
     }
 
-    public void select(int i) {
-        buttons.get(i).light();
+    public void lightFirst() {
+        var b = buttonsBrick.bricks();
+        if(b.present()) {
+            OptionPowerButton pb = b.asExpected();
+            pb.light(requestLight(pb));
+        }
+    }
+
+    public void lightNext(boolean up_down) {
+        boolean lightedFound = false;
+        boolean lightedLast = false;
+        var bricks = buttonsBrick.bricks();
+        var it = up_down ? bricks.reverse() : bricks.front();
+        for(var button : it.eachAs(OptionPowerButton.class)) {
+            if(lightedFound) {
+                button.light(lightedLast);
+                lightedLast = false;
+            } else {
+                lightedLast = lightedFound = button.lighted().get();
+                button.dim();
+            }
+        }
+        if(bricks.present()) {
+            if (!lightedFound || (lightedLast && wrapped)) {
+                if (up_down) bricks.last().as(OptionPowerButton.class).light();
+                else bricks.first().as(OptionPowerButton.class).light();
+            } else if(lightedLast) {
+                if (up_down) bricks.first().as(OptionPowerButton.class).light();
+                else bricks.last().as(OptionPowerButton.class).light();
+            }
+        }
+    }
+
+    public void setWrapped(boolean wrapped) {
+        this.wrapped = wrapped;
     }
 
     public void setOptions(List<String> options) {
@@ -97,7 +137,7 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
         bg.width().let(brick.width());
     }
 
-    public void attach(PowerBrick input, List<String> options) {
+    public void attach(PowerBrick<?> input, List<String> options) {
         attach(input);
         setOptions(options);
         resetOffset();
@@ -110,32 +150,48 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
     }
 
     @Override
-    public void update() {
+    public void frontUpdate() {
 
         var input = input();
-        boolean mouseIn = mouseIn();
-        boolean leftButtonPressEvent = false;
-        boolean leftButtonReleaseEvent = false;
-        for(var e : input.getEvents().selectAs(Mouse.ButtonEvent.class)) {
-            switch (e.button) {
-                case LEFT -> {
-                    if(e.isPress()) {
-                        leftButtonPressEvent = true;
+        var wall = wall();
+
+        for(var e : input.getEvents()) {
+            if(e instanceof Mouse.ButtonEvent buttonEvent) {
+                if(buttonEvent.button == Mouse.Button.Code.LEFT) {
+                    if(buttonEvent.isPress()) {
+                        boolean mouseIn = mouseIn();
+                        if(mouseIn) {
+                            wall.trapMouse(this);
+                        }
+                    } else if(buttonEvent.isRelease()) {
+                        if(wall.mouseTrappedBy(this)) {
+                            wall.freeMouse();
+                        }
                     }
-                    if(e.isRelease()) {
-                        leftButtonReleaseEvent = true;
+                }
+            } else if(e instanceof Keyboard.KeyEvent keyEvent) {
+                switch (keyEvent.key) {
+                    case DOWN -> {
+                        if (keyEvent.isHold()) {
+                            lightNext(false);
+                            suppressEvent(e);
+                        }
+                    }
+                    case UP -> {
+                        if (keyEvent.isHold()) {
+                            lightNext(true);
+                            suppressEvent(e);
+                        }
                     }
                 }
             }
         }
+    }
 
-        var wall = wall();
-        if(leftButtonPressEvent && mouseIn) {
-            wall.lockMouse(this);
-        } else if(leftButtonReleaseEvent && wall.mouseLocked()) {
-            wall.unlockMouse();
+    public boolean requestLight(OptionPowerButton optionPowerButton) {
+        for(var b : buttons) {
+            b.dim();
         }
-
-        super.update();
+        return true;
     }
 }
