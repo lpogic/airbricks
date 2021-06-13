@@ -95,15 +95,10 @@ public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
     public void frontUpdate() {
 
         boolean mouseIn = mouseIn(true);
-        boolean leftButtonPressEvent = false;
         for(var e : input.getEvents().filter(Mouse.ButtonEvent.class)) {
-            if(e.button == Mouse.Button.Code.LEFT && e.isPress()) {
-                leftButtonPressEvent = true;
+            if(e.button == Mouse.Button.Code.LEFT && e.isPress() && mouseIn) {
+                order(SelectionDealer.class).requestSelection(this);
             }
-        }
-
-        if(leftButtonPressEvent && mouseIn) {
-            order(SelectionDealer.class).requestSelection(this);
         }
     }
 

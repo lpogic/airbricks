@@ -5,14 +5,18 @@ import airbricks.model.PowerBrick;
 import airbricks.model.Int;
 import airbricks.model.WithRectangleBody;
 import airbricks.model.button.OptionPowerButton;
+import airbricks.model.button.SliderPowerButton;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.Rectangle;
-import bricks.input.Key;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
+import bricks.monitor.Monitor;
 import bricks.trade.Host;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.impulse.Constant;
+import bricks.var.impulse.Impulse;
+import bricks.var.special.Num;
 import bricks.wall.Brick;
 import bricks.wall.FantomBrick;
 import suite.suite.Subject;
@@ -28,9 +32,13 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
     List<OptionPowerButton> buttons;
     FantomBrick buttonsBrick;
     List<String> options;
-    int offset;
+    String searchString;
+    SliderPowerButton slider;
+    Var<Integer> offset;
 
     boolean wrapped;
+
+    Monitor offsetMonitor;
 
     public Assistance(Host host) {
         super(host);
@@ -43,8 +51,11 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
 
         buttons = new ArrayList<>();
 
+        offset = Vars.set(0);
+        offsetMonitor = when(offset.willChange(), this::updateButtons);
+
         OptionPowerButton prevButton = null;
-        for(int i = 0;i < 6; ++i) {
+        for(int i = 0;i < 3; ++i) {
             var button = new OptionPowerButton(this);
             button.width().let(bg.width());
             button.x().let(bg.x());
@@ -54,14 +65,26 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
                 button.top().let(prevButton.bottom());
             }
             int finalI = i;
-            when(button.clicked()).then(() -> pick(finalI));
+            when(button.clicked()).then(() -> pick(finalI + offset.get()));
             buttons.add(button);
             prevButton = button;
         }
-        bg.height().let(() -> buttons.stream().map(ob -> ob.height().getFloat()).reduce(0f, Float::sum));
+        bg.height().let(() -> {
+            float sum = 0f;
+            for(var b : buttonsBrick.bricks().eachAs(Brick.class)) {
+                sum += b.height().getFloat();
+            }
+            return sum;
+        });
 
         buttonsBrick = new FantomBrick(this);
-        $bricks.set(buttonsBrick);
+
+        slider = new SliderPowerButton(this);
+        slider.width().set(15);
+        slider.height().set(40);
+        slider.right().let(bg.right());
+
+        $bricks.set(buttonsBrick, slider);
     }
 
     Var<Int> picked;
@@ -78,7 +101,7 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
         var b = buttonsBrick.bricks();
         if(b.present()) {
             OptionPowerButton pb = b.asExpected();
-            pb.light(requestLight(pb));
+            pb.light(requestLight());
         }
     }
 
@@ -98,11 +121,32 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
         }
         if(bricks.present()) {
             if (!lightedFound || (lightedLast && wrapped)) {
-                if (up_down) bricks.last().as(OptionPowerButton.class).light();
-                else bricks.first().as(OptionPowerButton.class).light();
+                if (up_down) {
+                    bricks.last().as(OptionPowerButton.class).light();
+                    slider.bottom().set(bottom().get());
+                }
+                else {
+                    bricks.first().as(OptionPowerButton.class).light();
+                    slider.top().set(top().get());
+                }
             } else if(lightedLast) {
-                if (up_down) bricks.first().as(OptionPowerButton.class).light();
-                else bricks.last().as(OptionPowerButton.class).light();
+                var off = offset.get();
+                var offMax = options.size() - bricks.size();
+                if (up_down) {
+                    if(off > 0) {
+                        offset.set(off - 1);
+                        slider.top().set(top().getFloat() + (off - 1f) / offMax *
+                                (height().getFloat() - slider.height().getFloat()));
+                    }
+                    bricks.first().as(OptionPowerButton.class).light();
+                } else {
+                    if(off < offMax) {
+                        offset.set(off + 1);
+                        slider.top().set(top().getFloat() + (off + 1f) / offMax *
+                                (height().getFloat() - slider.height().getFloat()));
+                    }
+                    bricks.last().as(OptionPowerButton.class).light();
+                }
             }
         }
     }
@@ -113,17 +157,36 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
 
     public void setOptions(List<String> options) {
         this.options = options;
+        this.searchString = null;
+        if(options.size() > buttons.size()) $bricks.set(slider);
+        else $bricks.unset(slider);
+        offset.set(0);
+        updateButtons();
     }
 
-    void resetOffset() {
-        offset = 0;
+    public void setOptions(List<String> options, String searchString) {
+        this.options = options;
+        this.searchString = searchString;
+        if(options.size() > buttons.size()) $bricks.set(slider);
+        else $bricks.unset(slider);
+        offset.set(0);
+        updateButtons();
     }
 
     void updateButtons() {
+        var off = offset.get();
+        buttonsBrick.bricks().unset();
         for(int i = 0;i < buttons.size();++i) {
             var button = buttons.get(i);
-            if(options.size() > i + offset) {
-                button.string().set(options.get(i));
+            var offI = i + off;
+            if(options.size() > offI) {
+                var str = options.get(offI);
+                if(searchString != null) {
+                    var index = str.indexOf(searchString);
+                    if (index >= 0) button.note.select(index, searchString.length());
+                    else button.note.select(0,0);
+                } else button.note.select(0,0);
+                button.string().set(str);
                 buttonsBrick.bricks().set(button);
             } else {
                 buttonsBrick.bricks().unset(button);
@@ -132,22 +195,30 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
     }
 
     public void attach(Brick<?> brick) {
-        bg.top().let(brick.bottom());
+        if(brick.bottom().getFloat() + bg.height().getFloat() <= wall().bottom().getFloat()) {
+            bg.top().let(brick.bottom());
+        } else {
+            bg.bottom().let(brick.top());
+        }
         bg.left().let(brick.left());
         bg.width().let(brick.width());
     }
 
     public void attach(PowerBrick<?> input, List<String> options) {
-        attach(input);
         setOptions(options);
-        resetOffset();
+        offset.set(0);
         updateButtons();
+        attach(input);
+        slider.y().set(top().getFloat() + slider.height().getFloat() / 2);
+        sliderYChange = slider.y().willChange();
     }
 
     @Override
     public Rectangle getBody() {
         return bg;
     }
+
+    Impulse sliderYChange = Constant.getInstance();
 
     @Override
     public void frontUpdate() {
@@ -186,9 +257,23 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
                 }
             }
         }
+
+        if(sliderYChange.occur()) {
+            var part = (slider.top().getFloat() - top().getFloat()) / (height().getFloat() - slider.height().getFloat());
+            var maxOffset = options.size() - buttonsBrick.bricks().size();
+            offset.set(Num.trim(Math.round((maxOffset) * part), 0, maxOffset));
+        }
     }
 
-    public boolean requestLight(OptionPowerButton optionPowerButton) {
+    @Override
+    public Subject order(Subject trade) {
+        if(OptionPowerButton.LIGHT_REQUEST.equals(trade.raw())) {
+            return set$(requestLight());
+        }
+        return super.order(trade);
+    }
+
+    public boolean requestLight() {
         for(var b : buttons) {
             b.dim();
         }

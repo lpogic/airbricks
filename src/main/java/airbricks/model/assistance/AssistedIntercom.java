@@ -10,6 +10,7 @@ import bricks.trade.Host;
 import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
+import bricks.var.impulse.Impulse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,9 +41,13 @@ public class AssistedIntercom extends Intercom implements AssistanceClient {
         supplement.color().set(Color.hex("#585855"));
         supplement.left().let(note.right());
         supplement.bottom().let(note.bottom());
+
+        stringChange = string().willChange();
+
         $bricks.set(supplement);
     }
 
+    Impulse stringChange;
 
     @Override
     public void frontUpdate() {
@@ -51,7 +56,7 @@ public class AssistedIntercom extends Intercom implements AssistanceClient {
             var input = input();
             for(var e : input.getEvents().filter(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
-                    case DOWN -> {
+                    case DOWN, UP -> {
                         if(e.isHold()) {
                             if(!assisted.get()) {
                                 suppressEvent(e);
@@ -64,7 +69,7 @@ public class AssistedIntercom extends Intercom implements AssistanceClient {
                             }
                         }
                     }
-                    case BACKSPACE -> {
+                    case ESCAPE -> {
                         if(e.isPress()) {
                             if (assistanceShown.get()) {
                                 suppressEvent(e);
@@ -72,7 +77,24 @@ public class AssistedIntercom extends Intercom implements AssistanceClient {
                             }
                         }
                     }
+                    case RIGHT -> {
+                        if(e.isPress()) {
+                            if(note.cursorPosition().get() == note.string().get().length()) {
+                                note.paste(supplement.string().get());
+                                if(assistanceShown.get()) {
+                                    hideAssistance();
+                                }
+                            }
+                        }
+                    }
                 }
+            }
+        }
+
+        if(stringChange.occur()) {
+            if(assisted.get()) {
+                var str = string().get();
+                assistance.setOptions(advices.stream().filter(s -> s.contains(str)).toList(), str);
             }
         }
 
@@ -117,6 +139,9 @@ public class AssistedIntercom extends Intercom implements AssistanceClient {
     protected void showAssistance(boolean show) {
         if(assistanceShown.get() != show) {
             if(show) {
+                if(!assisted.get()) {
+                    requestAssistance();
+                }
                 wall().push(assistance);
             } else {
                 wall().pop(assistance);

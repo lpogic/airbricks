@@ -13,6 +13,7 @@ import bricks.input.Mouse;
 import bricks.input.Story;
 import bricks.input.UserAction;
 import bricks.trade.Host;
+import bricks.var.Source;
 import bricks.var.Var;
 import bricks.var.Vars;
 import bricks.var.impulse.State;
@@ -22,10 +23,10 @@ import suite.suite.util.Cascade;
 
 public class Note extends Airbrick<Host> implements Rectangular {
 
-    final ColorText text;
-    final ColorRectangle cursor;
-    final NoteCars cars;
-    final Var<Integer> cursorPosition;
+    public final ColorText text;
+    public final ColorRectangle cursor;
+    public final NoteCars cars;
+    public final Var<Integer> cursorPosition;
 
     public Note(Host host) {
         super(host);
@@ -704,6 +705,10 @@ public class Note extends Airbrick<Host> implements Rectangular {
                 $bricks.unset(cursor, cars);
             }
         }
+    }
+
+    public Var<Integer> cursorPosition() {
+        return cursorPosition;
     }
 
     State<Boolean> selected;
