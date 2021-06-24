@@ -5,10 +5,7 @@ import airbricks.model.PowerBrick;
 import airbricks.model.assistance.Assistance;
 import airbricks.model.selection.SelectionClient;
 import bricks.Color;
-import bricks.Coordinated;
 import bricks.Sized;
-import bricks.graphic.ColorText;
-import bricks.input.InputEvent;
 import bricks.input.Key;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
@@ -16,15 +13,15 @@ import bricks.trade.Contract;
 import bricks.trade.Host;
 import bricks.var.Var;
 
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
-public class OptionPowerButton extends PowerBrick<Assistance> implements SelectionClient {
+public class OptionPowerButton extends PowerBrick<Host> implements SelectionClient {
 
     public static final Contract<Boolean> LIGHT_REQUEST = new Contract<>();
 
     public final Note note;
 
-    public OptionPowerButton(Assistance host) {
+    public OptionPowerButton(Host host) {
         super(host);
 
         note = note();

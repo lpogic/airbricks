@@ -1,6 +1,7 @@
 package airbricks.model;
 
 import bricks.Color;
+import bricks.Coordinate;
 import bricks.Coordinated;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
@@ -21,7 +22,7 @@ import bricks.var.special.Num;
 import bricks.var.special.NumSource;
 import suite.suite.util.Cascade;
 
-public class Note extends Airbrick<Host> implements Rectangular {
+public class Note extends Airbrick<Host> implements Rectangular, Coordinate {
 
     public final ColorText text;
     public final ColorRectangle cursor;

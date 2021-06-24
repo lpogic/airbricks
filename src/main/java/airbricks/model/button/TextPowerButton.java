@@ -12,7 +12,7 @@ import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
 
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
 public class TextPowerButton extends PowerBrick<Host> implements SelectionClient {
 

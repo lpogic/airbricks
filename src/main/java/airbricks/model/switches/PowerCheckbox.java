@@ -1,18 +1,9 @@
 package airbricks.model.switches;
 
-import bricks.Color;
-import bricks.Coordinated;
-import bricks.graphic.ColorRectangle;
-import bricks.graphic.ColorText;
-import bricks.input.Key;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
 import bricks.trade.Host;
-import bricks.var.Var;
-import bricks.var.Vars;
 import bricks.var.impulse.State;
 
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
 public class PowerCheckbox extends PowerSwitch {
 

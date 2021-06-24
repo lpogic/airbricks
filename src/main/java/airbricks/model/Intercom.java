@@ -12,7 +12,7 @@ import bricks.trade.Host;
 import bricks.var.Var;
 import suite.suite.Subject;
 
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
 public class Intercom extends PowerBrick<Host> implements Rectangle, SelectionClient {
 

@@ -12,4 +12,5 @@ open module airbricks {
     exports airbricks.model.assistance;
     exports airbricks.model.selection;
     exports airbricks.model.switches;
+    exports airbricks.model.tool;
 }

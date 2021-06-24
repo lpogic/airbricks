@@ -6,6 +6,8 @@ import airbricks.model.assistance.ExclusiveAssistanceDealer;
 import airbricks.model.selection.ExclusiveSelectionDealer;
 import airbricks.model.selection.SelectionClient;
 import airbricks.model.selection.SelectionDealer;
+import airbricks.model.tool.ExclusiveToolBrickDealer;
+import airbricks.model.tool.ToolBrickDealer;
 import bricks.Color;
 import bricks.input.Mouse;
 import bricks.var.Var;
@@ -18,7 +20,7 @@ import suite.suite.Subject;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.opengl.GL11.*;
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
 public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
 
@@ -88,7 +90,8 @@ public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
                 .put(Wall.class, this)
                 .put(bricks.wall.Wall.class, this)
                 .put(SelectionDealer.class, new ExclusiveSelectionDealer())
-                .put(AssistanceDealer.class, new ExclusiveAssistanceDealer(this));
+                .put(AssistanceDealer.class, new ExclusiveAssistanceDealer(this))
+                .put(ToolBrickDealer.class, new ExclusiveToolBrickDealer(this));
     }
 
     @Override

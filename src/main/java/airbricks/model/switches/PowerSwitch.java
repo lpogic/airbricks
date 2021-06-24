@@ -4,7 +4,6 @@ import airbricks.model.PowerBrick;
 import airbricks.model.selection.SelectionClient;
 import bricks.Color;
 import bricks.Coordinated;
-import bricks.Sized;
 import bricks.graphic.ColorRectangle;
 import bricks.graphic.ColorText;
 import bricks.input.Key;
@@ -13,7 +12,7 @@ import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
 
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
 public class PowerSwitch extends PowerBrick<Host> implements SelectionClient {
 

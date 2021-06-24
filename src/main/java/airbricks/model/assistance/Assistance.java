@@ -20,17 +20,18 @@ import bricks.var.special.Num;
 import bricks.wall.Brick;
 import bricks.wall.FantomBrick;
 import suite.suite.Subject;
+import suite.suite.action.Statement;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static suite.suite.$.set$;
+import static suite.suite.$uite.set$;
 
 public class Assistance extends Airbrick<Host> implements WithRectangleBody {
 
     ColorRectangle bg;
     List<OptionPowerButton> buttons;
-    FantomBrick buttonsBrick;
+    FantomBrick usedButtons;
     List<String> options;
     String searchString;
     SliderPowerButton slider;
@@ -71,20 +72,20 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
         }
         bg.height().let(() -> {
             float sum = 0f;
-            for(var b : buttonsBrick.bricks().eachAs(Brick.class)) {
+            for(var b : usedButtons.bricks().eachAs(Brick.class)) {
                 sum += b.height().getFloat();
             }
             return sum;
         });
 
-        buttonsBrick = new FantomBrick(this);
+        usedButtons = new FantomBrick(this);
 
         slider = new SliderPowerButton(this);
         slider.width().set(15);
         slider.height().set(40);
         slider.right().let(bg.right());
 
-        $bricks.set(buttonsBrick, slider);
+        $bricks.set(usedButtons, slider);
     }
 
     Var<Int> picked;
@@ -98,7 +99,7 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
     }
 
     public void lightFirst() {
-        var b = buttonsBrick.bricks();
+        var b = usedButtons.bricks();
         if(b.present()) {
             OptionPowerButton pb = b.asExpected();
             pb.light(requestLight());
@@ -108,7 +109,7 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
     public void lightNext(boolean up_down) {
         boolean lightedFound = false;
         boolean lightedLast = false;
-        var bricks = buttonsBrick.bricks();
+        var bricks = usedButtons.bricks();
         var it = up_down ? bricks.reverse() : bricks.front();
         for(var button : it.eachAs(OptionPowerButton.class)) {
             if(lightedFound) {
@@ -175,7 +176,7 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
 
     void updateButtons() {
         var off = offset.get();
-        buttonsBrick.bricks().unset();
+        usedButtons.bricks().unset();
         for(int i = 0;i < buttons.size();++i) {
             var button = buttons.get(i);
             var offI = i + off;
@@ -187,9 +188,9 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
                     else button.note.select(0,0);
                 } else button.note.select(0,0);
                 button.string().set(str);
-                buttonsBrick.bricks().set(button);
+                usedButtons.bricks().set(button);
             } else {
-                buttonsBrick.bricks().unset(button);
+                usedButtons.bricks().unset(button);
             }
         }
     }
@@ -260,7 +261,7 @@ public class Assistance extends Airbrick<Host> implements WithRectangleBody {
 
         if(sliderYChange.occur()) {
             var part = (slider.top().getFloat() - top().getFloat()) / (height().getFloat() - slider.height().getFloat());
-            var maxOffset = options.size() - buttonsBrick.bricks().size();
+            var maxOffset = options.size() - usedButtons.bricks().size();
             offset.set(Num.trim(Math.round((maxOffset) * part), 0, maxOffset));
         }
     }
