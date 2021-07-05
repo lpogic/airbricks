@@ -4,13 +4,17 @@ open module airbricks {
     requires org.lwjgl.opengl;
     requires org.lwjgl.stb;
     requires brackettree;
-    requires suite.main;
+    requires suite;
     requires bricks;
 
-    exports airbricks.model;
-    exports airbricks.model.button;
-    exports airbricks.model.assistance;
-    exports airbricks.model.selection;
-    exports airbricks.model.switches;
-    exports airbricks.model.tool;
+    exports airbricks.button;
+    exports airbricks.assistance;
+    exports airbricks.selection;
+    exports airbricks.switches;
+    exports airbricks.tool;
+    exports airbricks.note;
+    exports airbricks.intercom;
+    exports airbricks.form;
+    exports airbricks.table;
+    exports airbricks;
 }
