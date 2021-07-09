@@ -1,14 +1,17 @@
 package airbricks.tool;
 
+import airbricks.Wall;
+import bricks.trade.Agent;
 import bricks.trade.Host;
 
-public class ExclusiveToolDealer implements ToolDealer {
+public class ExclusiveToolDealer extends Agent<Host> implements ToolDealer {
 
     ToolBrick toolBrick;
     ToolClient owner;
 
     public ExclusiveToolDealer(Host host) {
-        toolBrick = new ToolBrick(host);
+        super(host);
+        toolBrick = new ToolBrick(this);
     }
 
     @Override
@@ -16,5 +19,13 @@ public class ExclusiveToolDealer implements ToolDealer {
         if(owner != null) owner.depriveToolBrick();
         owner = client;
         return toolBrick;
+    }
+
+    @Override
+    public void deprive(ToolBrick toolBrick) {
+        if(owner != null) {
+            owner = null;
+            order(Wall.class).pop(toolBrick);
+        }
     }
 }

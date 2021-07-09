@@ -11,10 +11,9 @@ import bricks.input.Mouse;
 import bricks.input.Story;
 import bricks.trade.Host;
 import bricks.var.Var;
-import bricks.var.special.Num;
 import suite.suite.Subject;
 
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public class IntercomBrick extends PowerBrick<Host> implements Rectangle, SelectionClient {
 
@@ -26,7 +25,7 @@ public class IntercomBrick extends PowerBrick<Host> implements Rectangle, Select
         super(host);
 
         note = new NoteBrick(this);
-        note.left().let(Num.sum(this.left(), 10));
+        note.left().let(this.left().plus(10));
         note.y().let(this.y());
 
         adjust(Sized.relative(note, 20));
@@ -87,7 +86,7 @@ public class IntercomBrick extends PowerBrick<Host> implements Rectangle, Select
 
     public Subject order(Subject $) {
         if(Story.class.equals($.raw())) {
-            return set$(story);
+            return $(story);
         }
         return super.order($);
     }

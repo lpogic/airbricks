@@ -22,11 +22,11 @@ import suite.suite.Subject;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.opengl.GL11.*;
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
 
-    static Subject $walls = set$();
+    static Subject $walls = $();
 
     public static void play(Subject $sub) {
         glfwSetErrorCallback(GLFWErrorCallback.createPrint(System.err));
@@ -118,29 +118,5 @@ public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
     @Override
     public void requestSelection() {
         order(SelectionDealer.class).requestSelection(this);
-    }
-
-    protected TextButtonBrick button() {
-        return new TextButtonBrick(this);
-    }
-
-    protected TextButtonBrick button(String text) {
-        var button = button();
-        button.string().set(text);
-        return button;
-    }
-
-    protected NoteBrick note() {
-        return new NoteBrick(this);
-    }
-
-    protected NoteBrick note(String text) {
-        var note = note();
-        note.string().set(text);
-        return note;
-    }
-
-    protected IntercomBrick intercom() {
-        return new IntercomBrick(this);
     }
 }

@@ -12,7 +12,7 @@ import bricks.trade.Host;
 import bricks.var.special.Num;
 import bricks.wall.Updatable;
 
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public abstract class TableBrick extends Airbrick<Host> implements WithRectangularBody, Location {
 
@@ -33,12 +33,12 @@ public abstract class TableBrick extends Airbrick<Host> implements WithRectangul
     }
 
     protected Row addRow() {
-        table.addRows(set$(35));
+        table.addRows($(35));
         return new Row(table.rowsSize() - 1);
     }
 
     protected Column addColumn() {
-        table.addColumns(set$(100));
+        table.addColumns($(100));
         return new Column(table.columnsSize() - 1);
     }
 
@@ -51,7 +51,7 @@ public abstract class TableBrick extends Airbrick<Host> implements WithRectangul
         }
 
         public Column add(Rectangle rectangle) {
-            if(table.columnsSize() <= col) table.addColumns(set$(100));
+            if(table.columnsSize() <= col) table.addColumns($(100));
             var sector = table.sector(col, col, row, row);
             rectangle.fill(sector);
             if(rectangle instanceof Printable || rectangle instanceof Updatable) $bricks.set(rectangle);
@@ -59,7 +59,7 @@ public abstract class TableBrick extends Airbrick<Host> implements WithRectangul
         }
 
         public Column add(Location location) {
-            if(table.columnsSize() <= col) table.addColumns(set$(100));
+            if(table.columnsSize() <= col) table.addColumns($(100));
             var sector = table.sector(col, col, row, row);
             location.aim(sector);
             if(location instanceof Printable || location instanceof Updatable) $bricks.set(location);
@@ -76,7 +76,7 @@ public abstract class TableBrick extends Airbrick<Host> implements WithRectangul
         }
 
         public Row add(Rectangle rectangle) {
-            if(table.rowsSize() <= row) table.addRows(set$(35));
+            if(table.rowsSize() <= row) table.addRows($(35));
             var sector = table.sector(col, col, row, row);
             rectangle.fill(sector);
             if(rectangle instanceof Printable || rectangle instanceof Updatable) $bricks.set(rectangle);
@@ -84,7 +84,7 @@ public abstract class TableBrick extends Airbrick<Host> implements WithRectangul
         }
 
         public Row add(Location location) {
-            if(table.rowsSize() <= row) table.addRows(set$(100));
+            if(table.rowsSize() <= row) table.addRows($(100));
             var sector = table.sector(col, col, row, row);
             location.aim(sector);
             if(location instanceof Printable || location instanceof Updatable) $bricks.set(location);

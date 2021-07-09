@@ -11,9 +11,8 @@ import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
-import bricks.var.special.Num;
 
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public class SwitchBrick extends PowerBrick<Host> implements SelectionClient {
 
@@ -34,8 +33,8 @@ public class SwitchBrick extends PowerBrick<Host> implements SelectionClient {
 
         text = new TextBrick(this);
         text.y().let(y());
-        text.left().let(Num.sum(stateBox.right(), +5));
-        height().let(Num.sum(text.height(), +20));
+        text.left().let(stateBox.right().plus(5));
+        height().let(text.height().plus(20));
         width().let(() -> {
             var textWidth = text.width().getFloat();
             return textWidth > 0 ? height().getFloat() + textWidth + 10 : height().getFloat();
@@ -88,9 +87,9 @@ public class SwitchBrick extends PowerBrick<Host> implements SelectionClient {
                     case TAB -> {
                         if(e.isHold()) {
                             if(e.isShifted()) {
-                                order(set$("selectPrev", this));
+                                order($("selectPrev", this));
                             } else {
-                                order(set$("selectNext", this));
+                                order($("selectNext", this));
                             }
                             tabPressEvent = true;
                         }

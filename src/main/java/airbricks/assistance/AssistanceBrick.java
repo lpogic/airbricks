@@ -24,7 +24,7 @@ import suite.suite.Subject;
 import java.util.ArrayList;
 import java.util.List;
 
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody {
 
@@ -268,7 +268,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
     @Override
     public Subject order(Subject trade) {
         if(OptionButtonBrick.LIGHT_REQUEST.equals(trade.raw())) {
-            return set$(requestLight());
+            return $(requestLight());
         }
         return super.order(trade);
     }

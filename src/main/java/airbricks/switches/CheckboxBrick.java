@@ -3,8 +3,6 @@ package airbricks.switches;
 import bricks.trade.Host;
 import bricks.var.impulse.State;
 
-import static suite.suite.$uite.set$;
-
 public class CheckboxBrick extends SwitchBrick {
 
     public final State<Boolean> checked;

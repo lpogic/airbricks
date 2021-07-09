@@ -12,7 +12,7 @@ import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
 
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public class TextButtonBrick extends PowerBrick<Host> implements SelectionClient {
 
@@ -70,9 +70,9 @@ public class TextButtonBrick extends PowerBrick<Host> implements SelectionClient
                     case TAB -> {
                         if(e.isHold()) {
                             if(e.isShifted()) {
-                                order(set$("selectPrev", this));
+                                order($("selectPrev", this));
                             } else {
-                                order(set$("selectNext", this));
+                                order($("selectNext", this));
                             }
                             tabPressEvent = true;
                         }

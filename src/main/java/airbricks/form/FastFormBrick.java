@@ -35,7 +35,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
         super(host);
         table = new Table();
         labelColumnWidth = Vars.num(120);
-        table.addColumns(add$(labelColumnWidth, 200));
+        table.addColumns($($(labelColumnWidth), $(200)));
 
         frame = new RectangleBrick(this) {{
             color().set(Color.hex("0"));
@@ -82,7 +82,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
     }
 
     protected void addInputRow(String label, PowerBrick<?> powerBrick) {
-        table.addRows(set$(50));
+        table.addRows($(50));
         int row = table.rowsSize() - 1;
         var sector = table.sector(0, row);
 
@@ -102,11 +102,11 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
     }
 
     protected void addSeparator() {
-        table.addRows(set$(20));
+        table.addRows($(20));
     }
 
     protected Row addRow() {
-        table.addRows(set$(50));
+        table.addRows($(50));
         return new Row(table.rowsSize() - 1);
     }
 
@@ -178,7 +178,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
             }
             if(selectionClient == null) selectionClient = $bricks.selectAs(SelectionClient.class).cascade().nextOrNull();
             selectionClient.requestSelection();
-            return set$();
+            return $();
         }
         if("selectPrev".equals(trade.raw())) {
             SelectionClient s = trade.last().asExpected();
@@ -190,7 +190,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
             }
             if(selectionClient == null) selectionClient = $bricks.reverse().selectAs(SelectionClient.class).cascade().nextOrNull();
             selectionClient.requestSelection();
-            return set$();
+            return $();
         }
 
         return super.order(trade);

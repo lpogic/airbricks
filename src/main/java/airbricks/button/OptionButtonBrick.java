@@ -12,8 +12,6 @@ import bricks.trade.Contract;
 import bricks.trade.Host;
 import bricks.var.Var;
 
-import static suite.suite.$uite.set$;
-
 public class OptionButtonBrick extends PowerBrick<Host> implements SelectionClient {
 
     public static final Contract<Boolean> LIGHT_REQUEST = new Contract<>();

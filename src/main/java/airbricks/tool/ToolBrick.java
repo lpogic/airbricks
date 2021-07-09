@@ -12,7 +12,6 @@ import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.trade.Host;
 import bricks.var.Var;
-import bricks.var.special.Num;
 import bricks.wall.Brick;
 import bricks.wall.FantomBrick;
 import suite.suite.Subject;
@@ -20,7 +19,7 @@ import suite.suite.action.Action;
 
 import java.util.Objects;
 
-import static suite.suite.$uite.set$;
+import static suite.suite.$uite.$;
 
 public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
 
@@ -74,11 +73,11 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
                     action.play();
                 }
             };
-            button.width().let(Num.sum(bg.width(), -5));
+            button.width().let(bg.width().plus(-5));
             button.x().let(bg.x());
             button.string().set(Objects.toString($.raw()));
             if(c.firstFall()) {
-                button.top().let(Num.sum(bg.top(), 3));
+                button.top().let(bg.top().plus(3));
             } else {
                 button.top().let(prevButton.bottom());
             }
@@ -180,13 +179,13 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
                             if(wall.mouseTrappedBy(this)) {
                                 wall.freeMouse();
                             }
-                            wall.pop(this);
+                            order(ToolDealer.class).deprive(this);
                         }
                     } else if(buttonEvent.isRelease()) {
                         if(wall.mouseTrappedBy(this)) {
                             wall.freeMouse();
                         }
-                        wall.pop(this);
+                        order(ToolDealer.class).deprive(this);
                     }
                 }
             } else if(e instanceof Keyboard.KeyEvent keyEvent) {
@@ -205,7 +204,7 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
                     }
                     case ESCAPE -> {
                         if(keyEvent.isRelease()) {
-                            wall.pop(this);
+                            order(ToolDealer.class).deprive(this);
                             keyEvent.suppress();
                         }
                     }
@@ -220,7 +219,7 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
     public Subject order(Subject trade) {
         if(OptionButtonBrick.LIGHT_REQUEST.equals(trade.raw())) {
             dimOptions();
-            return set$(optionLighted = true);
+            return $(optionLighted = true);
         }
         return super.order(trade);
     }
