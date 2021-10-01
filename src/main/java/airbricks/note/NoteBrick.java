@@ -96,7 +96,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
         var input = input();
         if(selected.get()) {
-            boolean pressOccur = input.getEvents().filter(Mouse.ButtonEvent.class).
+            boolean pressOccur = input.getEvents().select(Mouse.ButtonEvent.class).
                     anyTrue(e -> e.button == Mouse.Button.Code.LEFT && e.isPress());
             if(input.state.isPressed(Mouse.Button.Code.LEFT)) {
                 updateCursorPosition(pressOccur);
@@ -104,7 +104,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
             if(editable.get()) {
                     StringBuilder stringBuilder = new StringBuilder();
-                    for (var che : input.getEvents().filter(Keyboard.CharEvent.class)) {
+                    for (var che : input.getEvents().select(Keyboard.CharEvent.class)) {
                         stringBuilder.appendCodePoint(che.getCodepoint());
                     }
                     if(!stringBuilder.isEmpty()) {
@@ -119,7 +119,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
             }
 
             int cursorPos = cursorPosition.get();
-            for (var e : input.getEvents().filter(Keyboard.KeyEvent.class)) {
+            for (var e : input.getEvents().select(Keyboard.KeyEvent.class)) {
                 if (e.isHold()) {
                     if (e.key.isNumPad() && !e.isNumLocked()) {
                         switch (e.key) {

@@ -1,15 +1,21 @@
 package airbricks;
 
+import bricks.graphic.RectangleBrick;
 import bricks.wall.Wall;
-import suite.suite.$uite;
 
-import static suite.suite.$uite.$;
 import static suite.suite.$uite.$;
 
 public class Main extends Wall {
 
     @Override
     protected void setup() {
+//        var r = Shapes.rectangle($(
+//                "aim", $(this)
+//        ));
+//        $bricks.set(r);
+        $bricks.set(new RectangleBrick(this){{
+            aim(Main.this);
+        }});
     }
 
     @Override
@@ -18,6 +24,6 @@ public class Main extends Wall {
     }
 
     public static void main(String[] args) {
-        Wall.play($uite.$(Wall.class, $(Main.class)));
+        Wall.play($(Wall.class, $(new Main())));
     }
 }

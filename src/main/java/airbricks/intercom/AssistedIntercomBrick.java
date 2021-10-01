@@ -55,7 +55,7 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
 
         if (selected().get()) {
             var input = input();
-            for(var e : input.getEvents().filter(Keyboard.KeyEvent.class)) {
+            for(var e : input.getEvents().select(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
                     case DOWN, UP -> {
                         if(e.isHold()) {

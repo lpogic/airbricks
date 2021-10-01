@@ -46,7 +46,7 @@ public class IntercomBrick extends PowerBrick<Host> implements Rectangle, Select
         boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
         boolean leftButtonPressEvent = false;
         boolean leftButtonReleaseEvent = false;
-        for(var e : input.getEvents().filter(Mouse.ButtonEvent.class)) {
+        for(var e : input.getEvents().select(Mouse.ButtonEvent.class)) {
             switch (e.button) {
                 case LEFT -> {
                     if(e.isPress()) {
