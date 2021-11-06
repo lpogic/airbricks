@@ -4,29 +4,29 @@ import airbricks.Airbrick;
 import airbricks.PowerBrick;
 import airbricks.button.TextButtonBrick;
 import airbricks.note.NoteBrick;
-import airbricks.selection.SelectionClient;
+import airbricks.selection.KeyboardClient;
 import airbricks.table.Table;
 import bricks.Color;
 import bricks.Location;
 import bricks.Sized;
-import bricks.graphic.RectangleBrick;
-import bricks.graphic.Rectangular;
-import bricks.graphic.WithRectangularBody;
-import bricks.var.Vars;
-import bricks.var.special.Num;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Shape;
+import bricks.slab.WithShape;
+import bricks.var.Var;
+import bricks.var.special.NumPull;
 import bricks.wall.Brick;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
 
 import static suite.suite.$uite.*;
 
-public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangularBody, Location {
+public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Location {
 
     protected Table table;
-    RectangleBrick bg;
-    RectangleBrick frame;
+    RectangleSlab bg;
+    RectangleSlab frame;
 
-    Num labelColumnWidth;
+    NumPull labelColumnWidth;
 
     Statement submit;
     Statement cancel;
@@ -34,16 +34,16 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
     public FastFormBrick(Brick<?> host) {
         super(host);
         table = new Table();
-        labelColumnWidth = Vars.num(120);
+        labelColumnWidth = Var.num(120);
         table.addColumns($($(labelColumnWidth), $(200)));
 
-        frame = new RectangleBrick(this) {{
+        frame = new RectangleSlab(this) {{
             color().set(Color.hex("0"));
             aim(table);
             adjust(Sized.relative(table, 6));
         }};
 
-        bg = new RectangleBrick(this) {{
+        bg = new RectangleSlab(this) {{
            color().set(Color.hex("#082837"));
            fill(table);
         }};
@@ -55,13 +55,8 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
     }
 
     @Override
-    protected void frontUpdate() {
-
-    }
-
-    @Override
-    protected void frontUpdateAfter() {
-        super.frontUpdateAfter();
+    public void update() {
+        super.update();
 
         for (var e : input().getKeyEvents()) {
             switch (e.key) {
@@ -87,7 +82,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
         var sector = table.sector(0, row);
 
         NoteBrick note = new NoteBrick(this) {{
-            string().set(label);
+            text().set(label);
         }};
         note.y().let(sector.y());
         note.right().let(sector.right().perFloat(r -> r - 10));
@@ -136,7 +131,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
         var row = addRow();
         row.add(new TextButtonBrick(this) {
             {
-                string().set("Zapisz");
+                text().set("Zapisz");
             }
 
             @Override
@@ -147,7 +142,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
         });
         row.add(new TextButtonBrick(this) {
             {
-                string().set("Anuluj");
+                text().set("Anuluj");
             }
 
             @Override
@@ -169,27 +164,27 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
     @Override
     public Subject order(Subject trade) {
         if("selectNext".equals(trade.raw())) {
-            SelectionClient s = trade.last().asExpected();
+            KeyboardClient s = trade.last().asExpected();
 
-            SelectionClient selectionClient = null;
-            for(var sc : $bricks.reverse().selectAs(SelectionClient.class)) {
+            KeyboardClient keyboardClient = null;
+            for(var sc : $bricks.reverse().selectAs(KeyboardClient.class)) {
                 if(s.equals(sc)) break;
-                selectionClient = sc;
+                keyboardClient = sc;
             }
-            if(selectionClient == null) selectionClient = $bricks.selectAs(SelectionClient.class).cascade().nextOrNull();
-            selectionClient.requestSelection();
+            if(keyboardClient == null) keyboardClient = $bricks.selectAs(KeyboardClient.class).cascade().nextOrNull();
+            keyboardClient.requestKeyboard();
             return $();
         }
         if("selectPrev".equals(trade.raw())) {
-            SelectionClient s = trade.last().asExpected();
+            KeyboardClient s = trade.last().asExpected();
 
-            SelectionClient selectionClient = null;
-            for(var sc : $bricks.selectAs(SelectionClient.class)) {
+            KeyboardClient keyboardClient = null;
+            for(var sc : $bricks.selectAs(KeyboardClient.class)) {
                 if(s.equals(sc)) break;
-                selectionClient = sc;
+                keyboardClient = sc;
             }
-            if(selectionClient == null) selectionClient = $bricks.reverse().selectAs(SelectionClient.class).cascade().nextOrNull();
-            selectionClient.requestSelection();
+            if(keyboardClient == null) keyboardClient = $bricks.reverse().selectAs(KeyboardClient.class).cascade().nextOrNull();
+            keyboardClient.requestKeyboard();
             return $();
         }
 
@@ -197,17 +192,17 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithRectangular
     }
 
     @Override
-    public Rectangular getBody() {
+    public Shape getShape() {
         return table;
     }
 
     @Override
-    public Num x() {
+    public NumPull x() {
         return table.x();
     }
 
     @Override
-    public Num y() {
+    public NumPull y() {
         return table.y();
     }
 }

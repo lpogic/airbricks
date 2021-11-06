@@ -3,21 +3,21 @@ package airbricks.assistance;
 import airbricks.Airbrick;
 import airbricks.PowerBrick;
 import airbricks.Int;
-import bricks.graphic.WithRectangleBody;
+import bricks.slab.Shape;
+import bricks.slab.Slab;
+import bricks.slab.WithSlab;
 import airbricks.button.OptionButtonBrick;
 import airbricks.button.SliderButtonBrick;
-import bricks.graphic.RectangleBrick;
-import bricks.graphic.Rectangle;
+import bricks.slab.RectangleSlab;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.monitor.Monitor;
 import bricks.trade.Host;
+import bricks.var.Pull;
 import bricks.var.Var;
-import bricks.var.Vars;
 import bricks.var.impulse.Constant;
 import bricks.var.impulse.Impulse;
-import bricks.var.special.Num;
-import bricks.wall.Brick;
+import bricks.var.special.NumPull;
 import bricks.wall.FantomBrick;
 import suite.suite.Subject;
 
@@ -26,15 +26,16 @@ import java.util.List;
 
 import static suite.suite.$uite.$;
 
-public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody {
+public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
 
-    RectangleBrick bg;
+    RectangleSlab bg;
     List<OptionButtonBrick> buttons;
     FantomBrick usedButtons;
     List<String> options;
     String searchString;
     SliderButtonBrick slider;
-    Var<Integer> offset;
+    Pull<Integer> offset;
+    Pull<Int> picked;
 
     boolean wrapped;
 
@@ -43,16 +44,12 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
     public AssistanceBrick(Host host) {
         super(host);
 
-        picked = Vars.get();
-
-        bg = new RectangleBrick(this);
-
+        picked = Var.let();
+        bg = new RectangleSlab(this);
         wrapped = false;
-
         buttons = new ArrayList<>();
-
-        offset = Vars.set(0);
-        offsetMonitor = when(offset.willChange(), this::updateButtons);
+        offset = Var.pull(0);
+        offsetMonitor = when(offset, this::updateButtons);
 
         OptionButtonBrick prevButton = null;
         for(int i = 0;i < 3; ++i) {
@@ -65,13 +62,13 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
                 button.top().let(prevButton.bottom());
             }
             int finalI = i;
-            when(button.clicked()).then(() -> pick(finalI + offset.get()));
+            when(button::getClicks, (a, b) -> a < b, () -> pick(finalI + offset.get()));
             buttons.add(button);
             prevButton = button;
         }
         bg.height().let(() -> {
             float sum = 0f;
-            for(var b : usedButtons.bricks().eachAs(Brick.class)) {
+            for(var b : usedButtons.bricks().eachAs(Shape.class)) {
                 sum += b.height().getFloat();
             }
             return sum;
@@ -87,49 +84,47 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
         $bricks.set(usedButtons, slider);
     }
 
-    Var<Int> picked;
-
     public void pick(int i) {
         picked.set(new Int(i));
     }
 
-    public Var<Int> picked() {
+    public Pull<Int> picked() {
         return picked;
     }
 
-    public void lightFirst() {
+    public void indicateFirst() {
         var b = usedButtons.bricks();
         if(b.present()) {
             OptionButtonBrick pb = b.asExpected();
-            pb.light(requestLight());
+            pb.indicate(requestIndication());
         }
     }
 
-    public void lightNext(boolean up_down) {
-        boolean lightedFound = false;
-        boolean lightedLast = false;
+    public void indicateNext(boolean up_down) {
+        boolean indicatedFound = false;
+        boolean indicatedLast = false;
         var bricks = usedButtons.bricks();
         var it = up_down ? bricks.reverse() : bricks.front();
         for(var button : it.eachAs(OptionButtonBrick.class)) {
-            if(lightedFound) {
-                button.light(lightedLast);
-                lightedLast = false;
+            if(indicatedFound) {
+                button.indicate(indicatedLast);
+                indicatedLast = false;
             } else {
-                lightedLast = lightedFound = button.lighted().get();
-                button.dim();
+                indicatedLast = indicatedFound = button.isIndicated();
+                button.indicate(false);
             }
         }
         if(bricks.present()) {
-            if (!lightedFound || (lightedLast && wrapped)) {
+            if (!indicatedFound || (indicatedLast && wrapped)) {
                 if (up_down) {
-                    bricks.last().as(OptionButtonBrick.class).light();
+                    bricks.last().as(OptionButtonBrick.class).indicate(true);
                     slider.bottom().set(bottom().get());
                 }
                 else {
-                    bricks.first().as(OptionButtonBrick.class).light();
+                    bricks.first().as(OptionButtonBrick.class).indicate(true);
                     slider.top().set(top().get());
                 }
-            } else if(lightedLast) {
+            } else if(indicatedLast) {
                 var off = offset.get();
                 var offMax = options.size() - bricks.size();
                 if (up_down) {
@@ -138,14 +133,14 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
                         slider.top().set(top().getFloat() + (off - 1f) / offMax *
                                 (height().getFloat() - slider.height().getFloat()));
                     }
-                    bricks.first().as(OptionButtonBrick.class).light();
+                    bricks.first().as(OptionButtonBrick.class).indicate(true);
                 } else {
                     if(off < offMax) {
                         offset.set(off + 1);
                         slider.top().set(top().getFloat() + (off + 1f) / offMax *
                                 (height().getFloat() - slider.height().getFloat()));
                     }
-                    bricks.last().as(OptionButtonBrick.class).light();
+                    bricks.last().as(OptionButtonBrick.class).indicate(true);
                 }
             }
         }
@@ -186,7 +181,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
                     if (index >= 0) button.note.select(index, searchString.length());
                     else button.note.select(0,0);
                 } else button.note.select(0,0);
-                button.string().set(str);
+                button.text().set(str);
                 usedButtons.bricks().set(button);
             } else {
                 usedButtons.bricks().unset(button);
@@ -194,34 +189,48 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
         }
     }
 
-    public void attach(Brick<?> brick) {
-        if(brick.bottom().getFloat() + bg.height().getFloat() <= wall().bottom().getFloat()) {
-            bg.top().let(brick.bottom());
+    public void attach(Shape shape, boolean preferTop) {
+        if(preferTop) {
+            bg.y().let(() -> {
+                float bgh = bg.height().getFloat();
+                if(shape.top().getFloat() - bgh < 0) {
+                    return shape.bottom().getFloat() + bgh / 2;
+                } else {
+                    return shape.top().getFloat() - bgh / 2;
+                }
+            });
         } else {
-            bg.bottom().let(brick.top());
+            bg.y().let(() -> {
+                float bgh = bg.height().getFloat();
+                if(shape.bottom().getFloat() + bgh <= wall().bottom().getFloat()) {
+                    return shape.bottom().getFloat() + bgh / 2;
+                } else {
+                    return shape.top().getFloat() - bgh / 2;
+                }
+            });
         }
-        bg.left().let(brick.left());
-        bg.width().let(brick.width());
+        bg.left().let(shape.left());
+        bg.width().let(shape.width());
     }
 
-    public void attach(PowerBrick<?> input, List<String> options) {
+    public void attach(PowerBrick<?> input, List<String> options, boolean preferTop) {
         setOptions(options);
         offset.set(0);
         updateButtons();
-        attach(input);
+        attach(input, preferTop);
         slider.y().set(top().getFloat() + slider.height().getFloat() / 2);
         sliderYChange = slider.y().willChange();
     }
 
     @Override
-    public Rectangle getBody() {
+    public Slab getShape() {
         return bg;
     }
 
     Impulse sliderYChange = Constant.getInstance();
 
     @Override
-    public void frontUpdate() {
+    public void update() {
 
         var input = input();
         var wall = wall();
@@ -230,7 +239,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
             if(e instanceof Mouse.ButtonEvent buttonEvent) {
                 if(buttonEvent.button == Mouse.Button.Code.LEFT) {
                     if(buttonEvent.isPress()) {
-                        boolean mouseIn = mouseIn();
+                        boolean mouseIn = seeCursor();
                         if(mouseIn) {
                             wall.trapMouse(this);
                         }
@@ -244,13 +253,13 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
                 switch (keyEvent.key) {
                     case DOWN -> {
                         if (keyEvent.isHold()) {
-                            lightNext(false);
+                            indicateNext(false);
                             keyEvent.suppress();
                         }
                     }
                     case UP -> {
                         if (keyEvent.isHold()) {
-                            lightNext(true);
+                            indicateNext(true);
                             keyEvent.suppress();
                         }
                     }
@@ -261,21 +270,23 @@ public class AssistanceBrick extends Airbrick<Host> implements WithRectangleBody
         if(sliderYChange.occur()) {
             var part = (slider.top().getFloat() - top().getFloat()) / (height().getFloat() - slider.height().getFloat());
             var maxOffset = options.size() - usedButtons.bricks().size();
-            offset.set(Num.trim(Math.round((maxOffset) * part), 0, maxOffset));
+            offset.set(NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset));
         }
+
+        super.update();
     }
 
     @Override
     public Subject order(Subject trade) {
-        if(OptionButtonBrick.LIGHT_REQUEST.equals(trade.raw())) {
-            return $(requestLight());
+        if(OptionButtonBrick.INDICATE_REQUEST.equals(trade.raw())) {
+            return $(requestIndication());
         }
         return super.order(trade);
     }
 
-    public boolean requestLight() {
+    public boolean requestIndication() {
         for(var b : buttons) {
-            b.dim();
+            b.indicate(false);
         }
         return true;
     }

@@ -1,50 +1,88 @@
 package airbricks.note;
 
 import airbricks.Airbrick;
+import airbricks.selection.KeyboardClient;
+import airbricks.selection.KeyboardDealer;
 import bricks.Color;
 import bricks.Location;
 import bricks.Located;
+import bricks.Sized;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
 import bricks.font.LoadedFont;
-import bricks.graphic.RectangleBrick;
-import bricks.graphic.TextBrick;
-import bricks.graphic.Rectangular;
+import bricks.slab.RectangleSlab;
+import bricks.slab.TextSlab;
+import bricks.slab.Shape;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.input.Story;
 import bricks.input.UserAction;
 import bricks.trade.Host;
+import bricks.var.Pull;
 import bricks.var.Var;
-import bricks.var.Vars;
-import bricks.var.impulse.State;
-import bricks.var.special.Num;
+import bricks.var.special.NumPull;
 import bricks.var.special.NumSource;
 import suite.suite.util.Cascade;
 
-public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
+public class NoteBrick extends Airbrick<Host> implements KeyboardClient, Shape, Location {
 
-    public final TextBrick text;
-    public final RectangleBrick cursor;
+    protected boolean editable;
+    public HasKeyboard hasKeyboard;
+
+    public final RectangleSlab background;
+    public final Pull<Color> backgroundColorDefault;
+    public final Pull<Color> backgroundColorSeeCursor;
+    public final Pull<Color> backgroundColorPressed;
+
+    public final RectangleSlab outline;
+    public final Pull<Color> outlineColorDefault;
+    public final Pull<Color> outlineColorSeeKeyboard;
+
+    public final NumPull outlineThick;
+
+    public final TextSlab text;
+    public final RectangleSlab cursor;
     public final NoteCars cars;
-    public final Var<Integer> cursorPosition;
+    public final Pull<Integer> cursorPosition;
 
     public NoteBrick(Host host) {
         super(host);
+        editable = true;
+        hasKeyboard = HasKeyboard.NO;
 
-        selected = state(false, this::select);
-        editable = state(true, this::setEditable);
+        backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
+        backgroundColorSeeCursor = Var.pull(Color.hex("#212323"));
+        backgroundColorPressed = Var.pull(Color.hex("#191B1B"));
 
-        text = new TextBrick(this) {{
+        outlineColorDefault = Var.pull(Color.hex("#1e1a2c"));
+        outlineColorSeeKeyboard = Var.pull(Color.mix(1, .8, .6));
+
+        outlineThick = Var.num(4);
+
+        outline = new RectangleSlab(this) {{
+            color().let(() -> seeKeyboard() ?
+                    outlineColorSeeKeyboard.get() :
+                    outlineColorDefault.get());
+        }};
+
+        background = new RectangleSlab(this) {{
+            color().let(() -> seeCursor() ?
+                    backgroundColorSeeCursor.get() :
+                    backgroundColorDefault.get());
+            aim(outline);
+            adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
+        }};
+
+        text = new TextSlab(this) {{
             height().set(20);
             color().set(Color.mix(1, 1, 1));
         }};
 
-        cursorPosition = Vars.set(0);
+        cursorPosition = Var.pull(0);
         cars = new NoteCars(this);
 
-        when(string()).then(() -> {
-            int len = string().get().length();
+        when(text()).then(() -> {
+            int len = text().get().length();
             if(len < cursorPosition.get()) {
                 cursorPosition.set(len);
             }
@@ -58,17 +96,17 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
             }
         });
 
-        cursor = new RectangleBrick(this) {{
+        cursor = new RectangleSlab(this) {{
             width().set(1);
             height().let(text.height());
             color().let(text.color());
             x().let(() -> {
                 int pos = cursorPosition.get();
                 LoadedFont font = order(FontManager.class).getFont(text.font().get());
-                float xOffset = font.getStringWidth(text.string().get().substring(0, pos), text.height().getFloat());
+                float xOffset = font.getStringWidth(text.text().get().substring(0, pos), text.height().getFloat());
                 float l = text.left().getFloat();
                 return l + xOffset;
-            }, cursorPosition, text.font(), text.string(), text.height(), text.x());
+            }, cursorPosition, text.font(), text.text(), text.height(), text.x());
             y().let(() -> {
                 BackedFont font = order(FontManager.class).getFont(text.font().get(), text.height().getFloat());
                 float y = text.y().getFloat();
@@ -82,7 +120,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
     public void updateCursorPosition(boolean resetCars) {
         float x = text.left().getFloat();
         int newCursorPos = order(FontManager.class).getFont(text.font().get())
-                .getCursorPosition(text.string().get(), text.height().getFloat(),
+                .getCursorPosition(text.text().get(), text.height().getFloat(),
                         x, (float) input().state.mouseCursorX());
         cursorPosition.set(newCursorPos);
         cars.headIndex.set(newCursorPos);
@@ -92,34 +130,44 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
     }
 
     @Override
-    public void frontUpdate() {
+    public void update() {
 
-        var input = input();
-        if(selected.get()) {
-            boolean pressOccur = input.getEvents().select(Mouse.ButtonEvent.class).
-                    anyTrue(e -> e.button == Mouse.Button.Code.LEFT && e.isPress());
-            if(input.state.isPressed(Mouse.Button.Code.LEFT)) {
-                updateCursorPosition(pressOccur);
+        var in = input();
+        boolean mouseLeftButtonPress = false;
+        for(var e : in.getEvents()) {
+            if(e instanceof Mouse.ButtonEvent be) {
+                if(be.button == Mouse.Button.Code.LEFT) {
+                    if(be.isPress()) {
+                        if(seeCursor()) {
+                            mouseLeftButtonPress = true;
+                        }
+                    }
+                }
+            }
+        }
+        if(seeKeyboard()) {
+            if(in.state.isPressed(Mouse.Button.Code.LEFT)) {
+                updateCursorPosition(mouseLeftButtonPress);
             }
 
-            if(editable.get()) {
+            if(editable) {
                     StringBuilder stringBuilder = new StringBuilder();
-                    for (var che : input.getEvents().select(Keyboard.CharEvent.class)) {
+                    for (var che : in.getEvents().select(Keyboard.CharEvent.class)) {
                         stringBuilder.appendCodePoint(che.getCodepoint());
                     }
                     if(!stringBuilder.isEmpty()) {
                         String inset = stringBuilder.toString();
-                        cut();
+                        cutSelected();
                         charInset(inset);
-                        String str = text.string().get();
+                        String str = text.text().get();
                         int cursorPos = cursorPosition.get();
-                        text.string().set(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
+                        text.text().set(str.substring(0, cursorPos) + inset + str.substring(cursorPos));
                         cursorPosition.set(cursorPos + inset.length());
                     }
             }
 
             int cursorPos = cursorPosition.get();
-            for (var e : input.getEvents().select(Keyboard.KeyEvent.class)) {
+            for (var e : in.getEvents().select(Keyboard.KeyEvent.class)) {
                 if (e.isHold()) {
                     if (e.key.isNumPad() && !e.isNumLocked()) {
                         switch (e.key) {
@@ -141,20 +189,20 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                             case NUM_1_END -> {
                                 if(cars.isAny()) {
                                     if(e.isShifted()) {
-                                        cars.headIndex.set(text.string().get().length());
+                                        cars.headIndex.set(text.text().get().length());
                                     } else {
                                         cars.reset();
                                     }
                                 } else {
                                     if(e.isShifted()) {
                                         cars.tailIndex.set(cursorPos);
-                                        cars.headIndex.set(text.string().get().length());
+                                        cars.headIndex.set(text.text().get().length());
                                     }
                                 }
-                                cursorPosition.set(text.string().get().length());
+                                cursorPosition.set(text.text().get().length());
                             }
                             case NUM_0_INSERT -> {
-                                if(!editable.get()) break;
+                                if(!editable) break;
                                 String clip = clipboard().get();
                                 NoteCars.MinMax minMax;
                                 if(cars.isAny()) {
@@ -162,20 +210,20 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                                 } else {
                                     minMax = new NoteCars.MinMax(cursorPos, cursorPos);
                                 }
-                                String str = text.string().get();
-                                text.string().set(str.substring(0, minMax.min()) +
+                                String str = text.text().get();
+                                text.text().set(str.substring(0, minMax.min()) +
                                         clip +
                                         str.substring(minMax.max()));
                                 cursorPosition.set(cursorPos + clip.length());
                             }
                             case NUM_DECIMAL_DELETE -> {
-                                if(!editable.get()) break;
-                                String cut = cut();
+                                if(!editable) break;
+                                String cut = cutSelected();
                                 if(cut.isEmpty()) {
-                                    String str = text.string().get();
+                                    String str = text.text().get();
                                     if (cursorPos < str.length()) {
                                         charErase(false);
-                                        text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
+                                        text.text().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
                                     }
                                 }
                             }
@@ -183,26 +231,26 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                     }
                     switch (e.key) {
                         case BACKSPACE -> {
-                            if(!editable.get()) break;
-                            String cut = cut();
+                            if(!editable) break;
+                            String cut = cutSelected();
                             if(cut.isEmpty()) {
                                 if (cursorPos > 0) {
                                     charErase(true);
-                                    String str = text.string().get();
-                                    text.string().set(str.substring(0, cursorPos - 1) + str.substring(cursorPos));
+                                    String str = text.text().get();
+                                    text.text().set(str.substring(0, cursorPos - 1) + str.substring(cursorPos));
                                     cursorPosition.set(cursorPos - 1);
                                 }
                             }
                             cars.reset();
                         }
                         case DELETE -> {
-                            if(!editable.get()) break;
-                            String cut = cut();
+                            if(!editable) break;
+                            String cut = cutSelected();
                             if(cut.isEmpty()) {
-                                String str = text.string().get();
+                                String str = text.text().get();
                                 if (cursorPos < str.length()) {
                                     charErase(false);
-                                    text.string().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
+                                    text.text().set(str.substring(0, cursorPos) + str.substring(cursorPos + 1));
                                 }
                             }
                         }
@@ -269,7 +317,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                                             cars.headIndex.set(tail);
                                         }
                                     } else {
-                                        if (cursorPos < text.string().get().length()) {
+                                        if (cursorPos < text.text().get().length()) {
                                             int jump = ctrlJump(cursorPos, false);
                                             if(!cars.isAny()) {
                                                 cars.tailIndex.set(cursorPos);
@@ -282,14 +330,14 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                                     if (!cars.isAny()) {
                                         cars.tailIndex.set(cursorPos);
                                     }
-                                    if (cursorPos < text.string().get().length()) {
+                                    if (cursorPos < text.text().get().length()) {
                                         cursorPosition.set(cursorPos + 1);
                                         cars.headIndex.set(cursorPos + 1);
                                     }
                                 }
                             } else {
                                 if(e.isControlled()) {
-                                    if (cursorPos < text.string().get().length()) {
+                                    if (cursorPos < text.text().get().length()) {
                                         if (cars.isAny()) {
                                             cars.reset();
                                         }
@@ -301,7 +349,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                                         cursorPosition.set(cars.getMaxIndex());
                                         cars.reset();
                                     } else {
-                                        if (cursorPos < text.string().get().length()) {
+                                        if (cursorPos < text.text().get().length()) {
                                             cursorPosition.set(cursorPos + 1);
                                         }
                                     }
@@ -326,26 +374,20 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                         case END -> {
                             if(cars.isAny()) {
                                 if(e.isShifted()) {
-                                    cars.headIndex.set(text.string().get().length());
+                                    cars.headIndex.set(text.text().get().length());
                                 } else {
                                     cars.reset();
                                 }
                             } else {
                                 if(e.isShifted()) {
                                     cars.tailIndex.set(cursorPos);
-                                    cars.headIndex.set(text.string().get().length());
+                                    cars.headIndex.set(text.text().get().length());
                                 }
                             }
-                            cursorPosition.set(text.string().get().length());
-                        }
-                        case CAPS_LOCK -> {
-                            if(!editable.get()) break;
-                            if(cars.isAny()) {
-                                caps(e.isCapsLocked());
-                            }
+                            cursorPosition.set(text.text().get().length());
                         }
                         case INSERT -> {
-                            if(!editable.get()) break;
+                            if(!editable) break;
                             String clip = clipboard().get();
                             if(!clip.isEmpty()) {
                                 paste(clip);
@@ -353,22 +395,22 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                             }
                         }
                         case X -> {
-                            if(!editable.get()) break;
+                            if(!editable) break;
                             if(e.isControlled() && !e.isAltered()) {
-                                String cut = cut();
+                                String cut = cutSelected();
                                 if(!cut.isEmpty()) clipboard().set(cut);
                             }
                         }
                         case C -> {
                             if(e.isControlled() && !e.isAltered()) {
-                                String copy = copy();
+                                String copy = getSelected();
                                 if(!copy.isEmpty()) {
                                     clipboard().set(copy);
                                 }
                             }
                         }
                         case V -> {
-                            if(!editable.get()) break;
+                            if(!editable) break;
                             if(e.isControlled() && !e.isAltered()) {
                                 String clip = clipboard().get();
                                 if(!clip.isEmpty()) {
@@ -378,9 +420,9 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                             }
                         }
                         case B -> {
-                            if(!editable.get()) break;
+                            if(!editable) break;
                             if(e.isControlled() && !e.isAltered()) {
-                                String cut = cut();
+                                String cut = cutSelected();
                                 String clip = clipboard().get();
                                 if(!clip.isEmpty()) {
                                     paste(clip);
@@ -390,7 +432,7 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                             }
                         }
                         case Z -> {
-                            if(!editable.get()) break;
+                            if(!editable) break;
                             if(e.isControlled() && !e.isAltered()) {
                                 Story story = story();
                                 pushOpenUserAction();
@@ -403,8 +445,8 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                         }
                         case A -> {
                             if(e.isControlled() && !e.isAltered()) {
-                                cursorPosition.set(text.string().get().length());
-                                cars.headIndex.set(text.string().get().length());
+                                cursorPosition.set(text.text().get().length());
+                                cars.headIndex.set(text.text().get().length());
                                 cars.tailIndex.set(0);
                             }
                         }
@@ -417,28 +459,30 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
                 }
             }
         }
+
+        super.update();
     }
 
     public void select(int begin, int length) {
-        if(begin >= 0 && length >= 0 && begin + length <= text.string().get().length()) {
+        if(begin >= 0 && length >= 0 && begin + length <= text.text().get().length()) {
             cars.tailIndex.set(begin);
             cars.headIndex.set(begin + length);
         }
     }
 
-    public String copy() {
+    public String getSelected() {
         if (cars.isAny()) {
             var minMax = cars.getMinMax();
-            String str = text.string().get();
+            String str = text.text().get();
             return str.substring(minMax.min(), minMax.max());
         }
         return "";
     }
 
-    public String cut() {
+    public String cutSelected() {
         if(cars.isAny()) {
             var minMax = cars.getMinMax();
-            String str = text.string().get();
+            String str = text.text().get();
             String cut = str.substring(minMax.min(), minMax.max());
             int cursorBegin = minMax.min();
 
@@ -446,8 +490,8 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
                 @Override
                 public void front() {
-                    String str = text.string().get();
-                    text.string().set(str.substring(0, cursorBegin) +
+                    String str = text.text().get();
+                    text.text().set(str.substring(0, cursorBegin) +
                             str.substring(cursorBegin + cut.length()));
                     cursorPosition.set(cursorBegin);
                     cars.reset();
@@ -455,8 +499,8 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
                 @Override
                 public void back() {
-                    String str = text.string().get();
-                    text.string().set(str.substring(0, cursorBegin) + cut +
+                    String str = text.text().get();
+                    text.text().set(str.substring(0, cursorBegin) + cut +
                             str.substring(cursorBegin));
                     cursorPosition.set(cursorBegin);
                     cars.headIndex.set(cursorBegin);
@@ -479,15 +523,15 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
             int cursorPos = cursorPosition.get();
             minMax = new NoteCars.MinMax(cursorPos, cursorPos);
         }
-        String str = text.string().get();
+        String str = text.text().get();
         String replaced = str.substring(minMax.min(), minMax.max());
 
         UserAction ua = new UserAction() {
 
             @Override
             public void front() {
-                String str = text.string().get();
-                text.string().set(str.substring(0, minMax.min()) + pasted +
+                String str = text.text().get();
+                text.text().set(str.substring(0, minMax.min()) + pasted +
                         str.substring(minMax.max()));
                 cursorPosition.set(minMax.min() + pasted.length());
                 cars.headIndex.set(minMax.min() + pasted.length());
@@ -496,48 +540,11 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
             @Override
             public void back() {
-                String str = text.string().get();
-                text.string().set(str.substring(0, minMax.min()) + replaced +
+                String str = text.text().get();
+                text.text().set(str.substring(0, minMax.min()) + replaced +
                         str.substring(minMax.min() + pasted.length()));
                 cursorPosition.set(minMax.min() + replaced.length());
                 cars.reset();
-            }
-        };
-        pushOpenUserAction();
-        ua.front();
-        story().push(ua);
-    }
-
-    public void caps(boolean upper) {
-        var minMax = cars.getMinMax();
-        String str = text.string().get();
-        String capsed = str.substring(minMax.min(), minMax.max());
-        int cursorBegin = minMax.min();
-
-        UserAction ua = new UserAction() {
-
-            @Override
-            public void front() {
-                String str = text.string().get();
-                int cursorEnd = cursorBegin + capsed.length();
-                text.string().set(str.substring(0, cursorBegin) +
-                        (upper ? capsed.toUpperCase() : capsed.toLowerCase()) +
-                        str.substring(cursorEnd));
-                cursorPosition.set(cursorEnd);
-                cars.headIndex.set(cursorEnd);
-                cars.tailIndex.set(cursorBegin);
-            }
-
-            @Override
-            public void back() {
-                String str = text.string().get();
-                int cursorEnd = cursorBegin + capsed.length();
-                text.string().set(str.substring(0, cursorBegin) +
-                        capsed +
-                        str.substring(cursorEnd));
-                cursorPosition.set(cursorEnd);
-                cars.headIndex.set(cursorEnd);
-                cars.tailIndex.set(cursorBegin);
             }
         };
         pushOpenUserAction();
@@ -560,16 +567,16 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
         @Override
         public void front() {
-            String str = text.string().get();
-            text.string().set(str.substring(0, cursorBegin) + inset + str.substring(cursorBegin));
+            String str = text.text().get();
+            text.text().set(str.substring(0, cursorBegin) + inset + str.substring(cursorBegin));
             cursorPosition.set(cursorBegin + inset.length());
             cars.reset();
         }
 
         @Override
         public void back() {
-            String str = text.string().get();
-            text.string().set(str.substring(0, cursorBegin) + str.substring(cursorBegin + inset.length()));
+            String str = text.text().get();
+            text.text().set(str.substring(0, cursorBegin) + str.substring(cursorBegin + inset.length()));
             cursorPosition.set(cursorBegin);
             cars.reset();
         }
@@ -607,16 +614,16 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
         @Override
         public void front() {
-            String str = text.string().get();
-            text.string().set(str.substring(0, cursorBegin) + str.substring(cursorBegin + outset.length()));
+            String str = text.text().get();
+            text.text().set(str.substring(0, cursorBegin) + str.substring(cursorBegin + outset.length()));
             cursorPosition.set(cursorBegin);
             cars.reset();
         }
 
         @Override
         public void back() {
-            String str = text.string().get();
-            text.string().set(str.substring(0, cursorBegin) + outset + str.substring(cursorBegin));
+            String str = text.text().get();
+            text.text().set(str.substring(0, cursorBegin) + outset + str.substring(cursorBegin));
             cursorPosition.set(cursorBegin + outset.length());
             cars.reset();
 
@@ -630,25 +637,25 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
             pushOpenUserAction();
             if(backspace) {
                 charErase.cursorBegin = cursorPos - 1;
-                charErase.outset = text.string().get().substring(cursorPos - 1, cursorPos);
+                charErase.outset = text.text().get().substring(cursorPos - 1, cursorPos);
             } else {
                 charErase.cursorBegin = cursorPos;
-                charErase.outset = text.string().get().substring(cursorPos, cursorPos + 1);
+                charErase.outset = text.text().get().substring(cursorPos, cursorPos + 1);
             }
         } else {
             if(charErase.cursorBegin != cursorPos) {
                 story().push(charErase);
                 if(backspace) {
-                    charErase = new CharEraseUserAction(cursorPos - 1, text.string().get().substring(cursorPos - 1, cursorPos));
+                    charErase = new CharEraseUserAction(cursorPos - 1, text.text().get().substring(cursorPos - 1, cursorPos));
                 } else {
-                    charErase = new CharEraseUserAction(cursorPos, text.string().get().substring(cursorPos, cursorPos + 1));
+                    charErase = new CharEraseUserAction(cursorPos, text.text().get().substring(cursorPos, cursorPos + 1));
                 }
             } else {
                 if(backspace) {
-                    charErase.outset = text.string().get().charAt(cursorPos - 1) + charErase.outset;
+                    charErase.outset = text.text().get().charAt(cursorPos - 1) + charErase.outset;
                     --charErase.cursorBegin;
                 } else {
-                    charErase.outset += text.string().get().charAt(cursorPos);
+                    charErase.outset += text.text().get().charAt(cursorPos);
                 }
             }
         }
@@ -658,10 +665,10 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
 
         Cascade<Integer> cps;
         if(reverse) {
-            StringBuilder str = new StringBuilder(text.string().get().substring(0, cursorPos));
+            StringBuilder str = new StringBuilder(text.text().get().substring(0, cursorPos));
             cps = new Cascade<>(str.reverse().codePoints().iterator());
         } else {
-            cps = new Cascade<>(text.string().get().substring(cursorPos)
+            cps = new Cascade<>(text.text().get().substring(cursorPos)
                     .codePoints().iterator());
         }
         int jump = 1;
@@ -690,99 +697,79 @@ public class NoteBrick extends Airbrick<Host> implements Rectangular, Location {
         }
     }
 
-    private void updateState() {
-        boolean selected = this.selected.get();
-        boolean editable = this.editable.get();
-        if(editable) {
-            if(selected) {
-                $bricks.unset(text);
-                $bricks.set(cars, cursor, text);
-            } else {
-                $bricks.unset(cursor, cars);
-            }
-        } else {
-            if(selected) {
-                $bricks.unset(text, cursor);
-                $bricks.set(cars, text);
-            } else {
-                $bricks.unset(cursor, cars);
-            }
-        }
-    }
-
-    public Var<Integer> cursorPosition() {
+    public Pull<Integer> cursorPosition() {
         return cursorPosition;
     }
 
-    State<Boolean> selected;
-
-    public void select(boolean state) {
-        if(selected.get() != state) {
-            selected.setState(state);
-            updateState();
-        }
+    public Pull<String> text() {
+        return text.text();
     }
 
-    public void select() {
-        select(true);
+    public void editable(boolean should) {
+        editable = should;
     }
 
-    public void unselect() {
-        select(false);
-    }
-
-    public Var<Boolean> selected() {
-        return selected;
-    }
-
-    public Var<String> string() {
-        return text.string();
-    }
-
-    final State<Boolean> editable;
-    public void setEditable(boolean state) {
-        if(editable.get() != state) {
-            editable.setState(state);
-            updateState();
-        }
-    }
-
-    public Var<Boolean> editable() {
+    public boolean isEditable() {
         return editable;
     }
 
-    public Num height() {
+    public NumPull height() {
         return text.height();
     }
     public NumSource width() {
         return text.width();
     }
 
-    public Num left() {
+    public NumPull left() {
         return text.left();
     }
 
-    public Num right() {
+    public NumPull right() {
         return text.right();
     }
 
-    public Num top() {
+    public NumPull top() {
         return text.top();
     }
 
-    public Num bottom() {
+    public NumPull bottom() {
         return text.bottom();
     }
 
-    public Num x() {
+    public NumPull x() {
         return text.x();
     }
 
-    public Num y() {
+    public NumPull y() {
         return text.y();
     }
 
     public void aim(Located located) {
         text.aim(located);
+    }
+
+    @Override
+    public HasKeyboard hasKeyboard() {
+        return hasKeyboard;
+    }
+
+    @Override
+    public void depriveKeyboard() {
+        hasKeyboard = HasKeyboard.NO;
+    }
+
+    @Override
+    public void requestKeyboard() {
+        var keyboardDealer = order(KeyboardDealer.class);
+        hasKeyboard = keyboardDealer.requestKeyboard(this);
+    }
+
+    public void showCursor() {
+        $bricks.aimedSet(text, cars);
+        $bricks.set(cursor);
+    }
+
+    public void hideCursor() {
+        $bricks.unset(cars, cursor);
     }
 }

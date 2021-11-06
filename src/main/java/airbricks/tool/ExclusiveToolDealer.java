@@ -25,7 +25,7 @@ public class ExclusiveToolDealer extends Agent<Host> implements ToolDealer {
     public void deprive(ToolBrick toolBrick) {
         if(owner != null) {
             owner = null;
-            order(Wall.class).pop(toolBrick);
+            order(Wall.class).drop(toolBrick);
         }
     }
 }

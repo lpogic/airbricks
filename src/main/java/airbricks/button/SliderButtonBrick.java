@@ -1,65 +1,99 @@
 package airbricks.button;
 
-import airbricks.PowerBrick;
-import airbricks.selection.SelectionClient;
+import airbricks.Airbrick;
 import bricks.Color;
-import bricks.input.Key;
-import bricks.input.Keyboard;
+import bricks.Sized;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Slab;
+import bricks.slab.WithSlab;
 import bricks.input.Mouse;
-import bricks.var.special.Num;
-import bricks.wall.Brick;
+import bricks.var.Pull;
+import bricks.var.Var;
+import bricks.var.special.NumPull;
 
-public class SliderButtonBrick extends PowerBrick<Brick<?>> implements SelectionClient {
+public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab {
 
-    public SliderButtonBrick(Brick<?> host) {
+    public boolean pressed;
+    public boolean indicated;
+
+    public final RectangleSlab background;
+    public final Pull<Color> backgroundColorDefault;
+    public final Pull<Color> backgroundColorIndicated;
+
+    public final RectangleSlab outline;
+    public final Pull<Color> outlineColorDefault;
+
+    public final NumPull outlineThick;
+
+
+    public SliderButtonBrick(Airbrick<?> host) {
         super(host);
 
-        outlineThick.set(3);
-        outlineColor.set(Color.hex("#0000"));
-        backgroundColor.set(Color.hex("#4b735d88"));
-        backgroundLightColor.set(Color.hex("#4b735d"));
-        backgroundPressColor.set(Color.hex("#4b735d"));
+        pressed = false;
+        indicated = false;
+
+        backgroundColorDefault = Var.pull(Color.hex("#4b735d88"));
+        backgroundColorIndicated = Var.pull(Color.hex("#4b735d"));
+
+        outlineColorDefault = Var.pull(Color.hex("#0000"));
+
+        outlineThick = Var.num(3);
+
+        outline = new RectangleSlab(this) {{
+            color().let(outlineColorDefault);
+        }};
+
+        background = new RectangleSlab(this) {{
+            color().let(() -> indicated ?
+                    backgroundColorIndicated.get() :
+                    backgroundColorDefault.get());
+            aim(outline);
+            adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
+        }};
+
+        $bricks.set(outline, background);
+    }
+
+    @Override
+    public Slab getShape() {
+        return outline;
     }
 
     double pressOffsetY;
 
     @Override
-    public void frontUpdate() {
+    public void update() {
 
-        var input = input();
-        boolean mouseIn = mouseIn();
-        for(var e : input.getEvents()) {
-            if(e instanceof Mouse.PositionEvent positionEvent) {
-                light(mouseIn);
-                if(pressed().get()) {
+        var in = input();
+        var wall = wall();
+        boolean seeCursor = seeCursor();
+        for(var e : in.getEvents()) {
+            if(e instanceof Mouse.PositionEvent pe) {
+                indicated = seeCursor;
+                if(pressed) {
                     var h2 = height().getFloat() / 2;
-                    y().set(Num.trim(positionEvent.y - pressOffsetY,
+                    y().set(NumPull.trim(pe.y - pressOffsetY,
                             host.top().getFloat() + h2,
                             host.bottom().getFloat() - h2));
                 }
-            } else if(e instanceof Mouse.ButtonEvent buttonEvent) {
-                if(buttonEvent.button == Mouse.Button.Code.LEFT) {
-                    if(buttonEvent.isPress()) {
-                        if(mouseIn) {
-                            wall().trapMouse(this);
-                            press();
-                            pressOffsetY = buttonEvent.state.mouseCursorY() - y().getFloat();
+            } else if(e instanceof Mouse.ButtonEvent be) {
+                if(be.button == Mouse.Button.Code.LEFT) {
+                    if(be.isPress()) {
+                        if(seeCursor()) {
+                            pressed = true;
+                            wall.trapMouse(this);
+                            pressOffsetY = be.state.mouseCursorY() - y().getFloat();
                         }
-                    } else if(buttonEvent.isRelease()) {
-                        if(pressed().get()) {
-                            wall().freeMouse();
-                            if(mouseIn) click();
-                            press(false);
+                    } else {
+                        pressed = false;
+                        if(wall.mouseTrappedBy(this)) {
+                            wall.freeMouse();
                         }
-                    }
-                }
-            } else if(e instanceof Keyboard.KeyEvent keyEvent) {
-                if(keyEvent.key == Key.Code.ENTER) {
-                    if(keyEvent.isPress()) {
-                        if(lighted.get()) click();
                     }
                 }
             }
         }
+
+        super.update();
     }
 }

@@ -5,26 +5,26 @@ import bricks.Color;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
 import bricks.font.LoadedFont;
-import bricks.graphic.RectangleBrick;
-import bricks.graphic.Rectangular;
-import bricks.graphic.TextBrick;
-import bricks.graphic.WithRectangularBody;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Shape;
+import bricks.slab.TextSlab;
+import bricks.slab.WithShape;
+import bricks.var.Pull;
 import bricks.var.Var;
-import bricks.var.Vars;
 
-public class NoteCars extends Airbrick<NoteBrick> implements WithRectangularBody {
+public class NoteCars extends Airbrick<NoteBrick> implements WithShape {
 
-    RectangleBrick body;
-    Var<Integer> headIndex;
-    Var<Integer> tailIndex;
+    RectangleSlab body;
+    Pull<Integer> headIndex;
+    Pull<Integer> tailIndex;
 
     public NoteCars(NoteBrick note) {
         super(note);
 
-        headIndex = Vars.set(0);
-        tailIndex = Vars.set(0);
+        headIndex = Var.pull(0);
+        tailIndex = Var.pull(0);
 
-        body = new RectangleBrick(this) {{
+        body = new RectangleSlab(this) {{
             color().set(Color.hex("#2e5fa6"));
         }};
 
@@ -33,30 +33,25 @@ public class NoteCars extends Airbrick<NoteBrick> implements WithRectangularBody
         body.left().let(() -> {
             int begin = getMinIndex();
             LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
-            float xOffset = font.getStringWidth(host.text.string().get().substring(0, begin), host.text.height().getFloat());
+            float xOffset = font.getStringWidth(host.text.text().get().substring(0, begin), host.text.height().getFloat());
             return host.text.left().getFloat() + xOffset;
         }, host.height(), host.text.font(), host.left(), headIndex, tailIndex);
 
         body.y().let(() -> {
-            TextBrick text = host.text;
+            TextSlab text = host.text;
             BackedFont font = order(FontManager.class).getFont(text.font().get(), text.height().getFloat());
             return text.y().getFloat() + font.getScaledDescent() / 2;
         });
 
         body.width().let(() -> {
             var minMax = getMinMax();
-            String str = host.text.string().get();
+            String str = host.text.text().get();
             LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
             str = substr(str, minMax.min, minMax.max);
             return font.getStringWidth(str, host.text.height().getFloat());
-        }, host.text.font(), host.string(), host.height(), headIndex, tailIndex);
+        }, host.text.font(), host.text(), host.height(), headIndex, tailIndex);
 
         $bricks.set(body);
-    }
-
-    @Override
-    protected void frontUpdate() {
-
     }
 
     String substr(String str, int begin, int end) {
@@ -82,11 +77,11 @@ public class NoteCars extends Airbrick<NoteBrick> implements WithRectangularBody
         return Math.max(headIndex.get(), tailIndex.get());
     }
 
-    public Var<Integer> head() {
+    public Pull<Integer> head() {
         return headIndex;
     }
 
-    public Var<Integer> tail() {
+    public Pull<Integer> tail() {
         return tailIndex;
     }
 
@@ -108,7 +103,7 @@ public class NoteCars extends Airbrick<NoteBrick> implements WithRectangularBody
     }
 
     @Override
-    public Rectangular getBody() {
+    public Shape getShape() {
         return body;
     }
 }

@@ -1,30 +1,29 @@
 package airbricks.table;
 
 import airbricks.Airbrick;
-import bricks.graphic.WithRectangularBody;
+import bricks.slab.WithShape;
 import bricks.Color;
 import bricks.Location;
-import bricks.graphic.RectangleBrick;
-import bricks.graphic.Printable;
-import bricks.graphic.Rectangle;
-import bricks.graphic.Rectangular;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Printable;
+import bricks.slab.Shape;
 import bricks.trade.Host;
-import bricks.var.special.Num;
+import bricks.var.special.NumPull;
 import bricks.wall.Updatable;
 
 import static suite.suite.$uite.$;
 
-public abstract class TableBrick extends Airbrick<Host> implements WithRectangularBody, Location {
+public abstract class TableBrick extends Airbrick<Host> implements WithShape, Location {
 
     Table table;
-    RectangleBrick bg;
+    RectangleSlab bg;
 
     public TableBrick(Host host) {
         super(host);
 
         table = new Table();
 
-        bg = new RectangleBrick(this) {{
+        bg = new RectangleSlab(this) {{
             color().set(Color.hex("#082837"));
             fill(table);
         }};
@@ -93,22 +92,17 @@ public abstract class TableBrick extends Airbrick<Host> implements WithRectangul
     }
 
     @Override
-    protected void frontUpdate() {
-
-    }
-
-    @Override
-    public Rectangular getBody() {
+    public Shape getShape() {
         return table;
     }
 
     @Override
-    public Num x() {
+    public NumPull x() {
         return table.x();
     }
 
     @Override
-    public Num y() {
+    public NumPull y() {
         return table.y();
     }
 }

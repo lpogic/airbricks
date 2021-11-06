@@ -2,8 +2,8 @@ package airbricks.table;
 
 import bricks.Location;
 import bricks.var.Source;
-import bricks.var.Vars;
-import bricks.var.special.Num;
+import bricks.var.Var;
+import bricks.var.special.NumPull;
 import bricks.var.special.NumSource;
 import suite.suite.Subject;
 import suite.suite.Suite;
@@ -83,16 +83,16 @@ public class Table implements Tabular, Location {
         }
     }
 
-    final Num left;
-    final Num top;
-    final Num width;
-    final Num height;
+    final NumPull left;
+    final NumPull top;
+    final NumPull width;
+    final NumPull height;
     List<Column> columns = new ArrayList<>();
     List<Row> rows = new ArrayList<>();
 
     public Table() {
 
-        width = Vars.num(() -> {
+        width = Var.num(() -> {
             float acc = 0f;
             for (var c : columns) {
                 acc += c.width.get().floatValue();
@@ -100,7 +100,7 @@ public class Table implements Tabular, Location {
             return acc;
         });
 
-        height = Vars.num(() -> {
+        height = Var.num(() -> {
             float acc = 0f;
             for (var r : rows) {
                 acc += r.height.get().floatValue();
@@ -108,8 +108,8 @@ public class Table implements Tabular, Location {
             return acc;
         });
 
-        left = Vars.num(0);
-        top = Vars.num(0);
+        left = Var.num(0);
+        top = Var.num(0);
     }
 
     @Override
@@ -185,7 +185,7 @@ public class Table implements Tabular, Location {
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));
             } else if($.is(Number.class)) {
-                $.reset(new Column(Vars.set($.asExpected())));
+                $.reset(new Column(Var.pull($.asExpected())));
             }
 
             if($.is(Column.class)) {
@@ -227,7 +227,7 @@ public class Table implements Tabular, Location {
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));
             } else if($.is(Number.class)) {
-                $.reset(new Column(Vars.set($.asExpected())));
+                $.reset(new Column(Var.pull($.asExpected())));
             }
 
             if($.is(Column.class)) {
@@ -273,7 +273,7 @@ public class Table implements Tabular, Location {
             if($.is(Source.class)) {
                 $.reset(new Row($.asExpected()));
             } else if($.is(Number.class)) {
-                $.reset(new Row(Vars.set($.asExpected())));
+                $.reset(new Row(Var.pull($.asExpected())));
             }
 
             if($.is(Row.class)) {
@@ -295,8 +295,8 @@ public class Table implements Tabular, Location {
     }
 
     @Override
-    public Num x() {
-        return new Num() {
+    public NumPull x() {
+        return new NumPull() {
             @Override
             public void let(Supplier<Number> s) {
                 left.let(() -> s.get().floatValue() - width.getFloat() / 2);
@@ -309,8 +309,8 @@ public class Table implements Tabular, Location {
         };
     }
 
-    public Num y() {
-        return new Num() {
+    public NumPull y() {
+        return new NumPull() {
             @Override
             public void let(Supplier<Number> s) {
                 top.let(() -> s.get().floatValue() - height.getFloat() / 2);
@@ -331,12 +331,12 @@ public class Table implements Tabular, Location {
         return height;
     }
 
-    public Num left() {
+    public NumPull left() {
         return left;
     }
 
-    public Num right() {
-        return new Num() {
+    public NumPull right() {
+        return new NumPull() {
             @Override
             public void let(Supplier<Number> s) {
                 left.let(() -> s.get().floatValue() - width.getFloat());
@@ -349,12 +349,12 @@ public class Table implements Tabular, Location {
         };
     }
 
-    public Num top() {
+    public NumPull top() {
         return top;
     }
 
-    public Num bottom() {
-        return new Num() {
+    public NumPull bottom() {
+        return new NumPull() {
             @Override
             public void let(Supplier<Number> s) {
                 top.let(() -> s.get().floatValue() - height.getFloat());

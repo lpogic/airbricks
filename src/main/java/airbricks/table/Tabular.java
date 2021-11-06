@@ -1,22 +1,22 @@
 package airbricks.table;
 
-import bricks.graphic.Rectangular;
+import bricks.slab.Shape;
 import bricks.var.Source;
-import bricks.var.Vars;
-import bricks.var.special.Num;
+import bricks.var.Var;
+import bricks.var.special.NumPull;
 import bricks.var.special.NumSource;
 
-public interface Tabular extends Rectangular {
+public interface Tabular extends Shape {
     Tabular sector(int column, int row);
     Tabular sector(int left, int right, int top, int bottom);
 
     class Column {
-        Num left;
-        Num width;
+        NumPull left;
+        NumPull width;
 
         public Column(Source<Number> width) {
-            this.width = Vars.num(width);
-            this.left = Vars.num(left);
+            this.width = Var.num(width);
+            this.left = Var.num(left);
         }
 
         public NumSource x() {
@@ -31,7 +31,7 @@ public interface Tabular extends Rectangular {
             return () -> left.get().floatValue() + width.get().floatValue();
         }
 
-        public Num width() {
+        public NumPull width() {
             return width;
         }
 
@@ -50,12 +50,12 @@ public interface Tabular extends Rectangular {
     }
 
     class Row {
-        Num top;
-        Num height;
+        NumPull top;
+        NumPull height;
 
         public Row(Source<Number> height) {
-            this.height = Vars.num(height);
-            this.top = Vars.num(0);
+            this.height = Var.num(height);
+            this.top = Var.num(0);
         }
 
         public NumSource y() {
@@ -70,7 +70,7 @@ public interface Tabular extends Rectangular {
             return () -> top.get().floatValue() + height.get().floatValue();
         }
 
-        public Num height() {
+        public NumPull height() {
             return height;
         }
 

@@ -2,17 +2,17 @@ package airbricks.tool;
 
 import airbricks.Airbrick;
 import airbricks.Int;
-import bricks.graphic.WithRectangleBody;
+import bricks.slab.Shape;
+import bricks.slab.Slab;
+import bricks.slab.WithSlab;
 import airbricks.button.OptionButtonBrick;
 import bricks.Color;
 import bricks.Located;
-import bricks.graphic.RectangleBrick;
-import bricks.graphic.Rectangle;
+import bricks.slab.RectangleSlab;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.trade.Host;
-import bricks.var.Var;
-import bricks.wall.Brick;
+import bricks.var.Pull;
 import bricks.wall.FantomBrick;
 import suite.suite.Subject;
 import suite.suite.action.Action;
@@ -21,23 +21,27 @@ import java.util.Objects;
 
 import static suite.suite.$uite.$;
 
-public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
+public class ToolBrick extends Airbrick<Host> implements WithSlab {
 
-    RectangleBrick bg;
+    RectangleSlab bg;
     FantomBrick tools;
 
     boolean wrapped;
+
+    Pull<Int> picked;
+
+    boolean optionIndicated;
 
     public ToolBrick(Host host) {
         super(host);
 
         tools = new FantomBrick(this);
 
-        bg = new RectangleBrick(this){{
+        bg = new RectangleSlab(this){{
             color().set(Color.BLACK);
             height().let(() -> {
                 float sum = 6f;
-                for(var b : tools.bricks().eachAs(Brick.class)) {
+                for(var b : tools.bricks().eachAs(Shape.class)) {
                     sum += b.height().getFloat();
                 }
                 return sum;
@@ -49,13 +53,11 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
         $bricks.set(bg, tools);
     }
 
-    Var<Int> picked;
-
     public void pick(int i) {
         picked.set(new Int(i));
     }
 
-    public Var<Int> picked() {
+    public Pull<Int> picked() {
         return picked;
     }
 
@@ -75,7 +77,7 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
             };
             button.width().let(bg.width().plus(-5));
             button.x().let(bg.x());
-            button.string().set(Objects.toString($.raw()));
+            button.text().set(Objects.toString($.raw()));
             if(c.firstFall()) {
                 button.top().let(bg.top().plus(3));
             } else {
@@ -91,46 +93,46 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
         bg.width().set(width);
     }
 
-    public void lightFirst() {
+    public void indicateFirst() {
         var b = tools.bricks();
         if(b.present()) {
             OptionButtonBrick pb = b.asExpected();
-            pb.light(order(OptionButtonBrick.LIGHT_REQUEST));
+            pb.indicate(order(OptionButtonBrick.INDICATE_REQUEST));
         }
     }
 
-    public void lightNext(boolean up_down) {
-        boolean lightedFound = false;
-        boolean lightedLast = false;
+    public void indicateNext(boolean up_down) {
+        boolean indicatedFound = false;
+        boolean indicatedLast = false;
         var bricks = tools.bricks();
         var it = up_down ? bricks.reverse() : bricks.front();
         for(var button : it.eachAs(OptionButtonBrick.class)) {
-            if(lightedFound) {
-                button.light(lightedLast);
-                lightedLast = false;
+            if(indicatedFound) {
+                button.indicate(indicatedLast);
+                indicatedLast = false;
             } else {
-                lightedLast = lightedFound = button.lighted().get();
-                button.dim();
+                indicatedLast = indicatedFound = button.isIndicated();
+                button.indicate(false);
             }
         }
         if(bricks.present()) {
-            if (!lightedFound || (lightedLast && wrapped)) {
+            if (!indicatedFound || (indicatedLast && wrapped)) {
                 if (up_down) {
-                    bricks.last().as(OptionButtonBrick.class).light();
+                    bricks.last().as(OptionButtonBrick.class).indicate(true);
                 }
                 else {
-                    bricks.first().as(OptionButtonBrick.class).light();
+                    bricks.first().as(OptionButtonBrick.class).indicate(true);
                 }
-            } else if(lightedLast) {
+            } else if(indicatedLast) {
                 if (up_down) {
-                    bricks.first().as(OptionButtonBrick.class).light();
+                    bricks.first().as(OptionButtonBrick.class).indicate(true);
                 } else {
-                    bricks.last().as(OptionButtonBrick.class).light();
+                    bricks.last().as(OptionButtonBrick.class).indicate(true);
                 }
             }
-            optionLighted = true;
+            optionIndicated = true;
         }
-        optionLighted = false;
+        optionIndicated = false;
     }
 
     public void setWrapped(boolean wrapped) {
@@ -154,18 +156,18 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
     }
 
     @Override
-    public Rectangle getBody() {
+    public Slab getShape() {
         return bg;
     }
 
     @Override
-    public void frontUpdate() {
+    public void update() {
 
         var input = input();
         var wall = wall();
-        boolean mouseIn = mouseIn();
+        boolean mouseIn = seeCursor();
 
-        if(optionLighted && !mouseIn) {
+        if(optionIndicated && !mouseIn) {
             dimOptions();
         }
 
@@ -192,13 +194,13 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
                 switch (keyEvent.key) {
                     case DOWN -> {
                         if (keyEvent.isHold()) {
-                            lightNext(false);
+                            indicateNext(false);
                             keyEvent.suppress();
                         }
                     }
                     case UP -> {
                         if (keyEvent.isHold()) {
-                            lightNext(true);
+                            indicateNext(true);
                             keyEvent.suppress();
                         }
                     }
@@ -211,23 +213,23 @@ public class ToolBrick extends Airbrick<Host> implements WithRectangleBody {
                 }
             }
         }
-    }
 
-    boolean optionLighted;
+        super.update();
+    }
 
     @Override
     public Subject order(Subject trade) {
-        if(OptionButtonBrick.LIGHT_REQUEST.equals(trade.raw())) {
+        if(OptionButtonBrick.INDICATE_REQUEST.equals(trade.raw())) {
             dimOptions();
-            return $(optionLighted = true);
+            return $(optionIndicated = true);
         }
         return super.order(trade);
     }
 
     public void dimOptions() {
         for(var b : tools.bricks().eachAs(OptionButtonBrick.class)) {
-            b.dim();
+            b.indicate(false);
         }
-        optionLighted = false;
+        optionIndicated = false;
     }
 }

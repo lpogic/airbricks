@@ -1,75 +1,125 @@
 package airbricks.button;
 
+import airbricks.Airbrick;
 import airbricks.note.NoteBrick;
-import airbricks.PowerBrick;
-import airbricks.selection.SelectionClient;
 import bricks.Color;
 import bricks.Sized;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Slab;
+import bricks.slab.WithSlab;
 import bricks.input.Key;
 import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.trade.Contract;
 import bricks.trade.Host;
+import bricks.var.Pull;
 import bricks.var.Var;
 
-public class OptionButtonBrick extends PowerBrick<Host> implements SelectionClient {
+public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
 
-    public static final Contract<Boolean> LIGHT_REQUEST = new Contract<>();
+    public static final Contract<Boolean> INDICATE_REQUEST = new Contract<>();
+
+    public boolean pressed;
+    public boolean indicated;
+    public int click;
+
+    public final RectangleSlab background;
+    protected final Pull<Color> backgroundColorDefault;
+    protected final Pull<Color> backgroundColorIndicated;
+    protected final Pull<Color> backgroundColorPressed;
 
     public final NoteBrick note;
 
     public OptionButtonBrick(Host host) {
         super(host);
 
+        pressed = false;
+        indicated = false;
+        click = 0;
+
+        backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
+        backgroundColorIndicated = Var.pull(Color.hex("#212323"));
+        backgroundColorPressed = Var.pull(Color.hex("#191B1B"));
+
+        background = new RectangleSlab(this) {{
+            color().let(() -> pressed ?
+                    backgroundColorPressed.get() : indicated ?
+                    backgroundColorIndicated.get() :
+                    backgroundColorDefault.get());
+        }};
+
         note = new NoteBrick(this) {{
             text.color().set(Color.hex("#1d100e0"));
-            aim(OptionButtonBrick.this);
+            y().let(OptionButtonBrick.this.y());
+            left().let(OptionButtonBrick.this.left().plus(10));
         }};
 
         adjust(Sized.relative(note, 40, 20));
 
-        outlineThick.set(0);
-
-        $bricks.set(note);
+        $bricks.set(background, note);
     }
 
-    boolean pressedIn = false;
-
     @Override
-    public void frontUpdate() {
+    public void update() {
 
-        var input = input();
-        boolean mouseIn = mouseIn();
-        for(var e : input.getEvents()) {
-            if(e instanceof Mouse.PositionEvent positionEvent) {
-                if(mouseIn) light(order(LIGHT_REQUEST));
-            } else if(e instanceof Mouse.ButtonEvent buttonEvent) {
-                if(buttonEvent.button == Mouse.Button.Code.LEFT) {
-                    if(buttonEvent.isPress()) {
-                        pressedIn = mouseIn;
-                    } else if(buttonEvent.isRelease()) {
-                        if(pressedIn && mouseIn) click();
+
+        var in = input();
+        var wall = wall();
+
+        for(var e : in.getEvents()) {
+            if(e instanceof Mouse.PositionEvent) {
+                if(seeCursor()) {
+                    if(!indicated) {
+                        indicate(order(INDICATE_REQUEST));
                     }
                 }
             } else if(e instanceof Keyboard.KeyEvent keyEvent) {
                 if(keyEvent.key == Key.Code.ENTER) {
                     if(keyEvent.isPress()) {
-                        if(lighted.get()) click();
+                        if(indicated) click();
+                    }
+                }
+            } else if(e instanceof Mouse.ButtonEvent be) {
+                if(be.button == Mouse.Button.Code.LEFT) {
+                    if(be.isPress()) {
+                        if(seeCursor()) {
+                            pressed = true;
+                        }
+                    } else {
+                        if(pressed && seeCursor()) {
+                            pressed = false;
+                            click();
+                        }
                     }
                 }
             }
         }
+
+        super.update();
+    }
+
+    public Pull<String> text() {
+        return note.text();
+    }
+
+    public boolean isIndicated() {
+        return indicated;
+    }
+
+    public void indicate(boolean should) {
+        indicated = should;
+    }
+
+    public void click() {
+        ++click;
+    }
+
+    public int getClicks() {
+        return click;
     }
 
     @Override
-    public void select(boolean state) {
-        if(state != selected.get()) {
-            selected.setState(state);
-            updateState();
-        }
-    }
-
-    public Var<String> string() {
-        return note.string();
+    public Slab getShape() {
+        return background;
     }
 }

@@ -1,32 +1,32 @@
 package airbricks.switches;
 
 import bricks.trade.Host;
-import bricks.var.impulse.State;
 
 public class CheckboxBrick extends SwitchBrick {
 
-    public final State<Boolean> checked;
+    public boolean checked;
 
     public CheckboxBrick(Host host) {
         super(host);
 
-        checked = state(false, this::check);
+        checked = false;
     }
 
     public void check(boolean check) {
-        if(checked.get() != check) {
-            if(check) {
-                stateRune.string().set("x");
-            } else {
-                stateRune.string().set("");
-            }
-            checked.setState(check);
+        if(check) {
+            stateRune.text().set("x");
+        } else {
+            stateRune.text().set("");
         }
+        checked = check;
     }
 
-    @Override
+    public boolean isChecked() {
+        return checked;
+    }
+
     public void click() {
-        check(!checked.get());
+        check(!checked);
         super.click();
     }
 }

@@ -1,30 +1,36 @@
 package airbricks;
 
-import airbricks.button.TextButtonBrick;
 import airbricks.assistance.AssistanceDealer;
 import airbricks.assistance.ExclusiveAssistanceDealer;
+import airbricks.button.TextButtonBrick;
+import airbricks.intercom.AssistedIntercomBrick;
 import airbricks.intercom.IntercomBrick;
-import airbricks.note.NoteBrick;
-import airbricks.selection.ExclusiveSelectionDealer;
-import airbricks.selection.SelectionClient;
-import airbricks.selection.SelectionDealer;
+import airbricks.selection.ExclusiveKeyboardDealer;
+import airbricks.selection.KeyboardClient;
+import airbricks.selection.KeyboardDealer;
 import airbricks.tool.ExclusiveToolDealer;
 import airbricks.tool.ToolDealer;
 import bricks.Color;
+import bricks.Located;
 import bricks.input.Mouse;
-import bricks.var.Var;
-import bricks.var.Vars;
+import bricks.slab.BluntLineSlab;
+import bricks.slab.CircleSlab;
+import bricks.slab.RectangleSlab;
+import bricks.slab.TextSlab;
+import bricks.wall.Brick;
+import bricks.wall.MouseClient;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLUtil;
 import suite.suite.Subject;
+import suite.suite.action.Statement;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.opengl.GL11.*;
 import static suite.suite.$uite.$;
 
-public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
+public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, MouseClient {
 
     static Subject $walls = $();
 
@@ -85,38 +91,147 @@ public abstract class Wall extends bricks.wall.Wall implements SelectionClient {
         return wall;
     }
 
+    protected MouseClient.CursorOver cursorOver;
+    MouseClient mouseRoot;
+
+    @Override
+    protected void setup0(int width, int height, Color color, String title) {
+        super.setup0(width, height, color, title);
+        this.mouseRoot = this;
+        this.cursorOver = CursorOver.NO;
+    }
+
     @Override
     protected void setupResources() {
         super.setupResources();
         $resources
                 .put(Wall.class, this)
                 .put(bricks.wall.Wall.class, this)
-                .put(SelectionDealer.class, new ExclusiveSelectionDealer())
+                .put(KeyboardDealer.class, new ExclusiveKeyboardDealer())
                 .put(AssistanceDealer.class, new ExclusiveAssistanceDealer(this))
                 .put(ToolDealer.class, new ExclusiveToolDealer(this));
     }
 
     @Override
-    public void frontUpdate() {
+    protected void update__() {
+        mouseRoot.acceptCursor(input.state.mouseCursor());
+    }
 
-        boolean mouseIn = mouseIn(true);
+    @Override
+    public void update() {
+
+        super.update();
+
         for(var e : input.getEvents().select(Mouse.ButtonEvent.class)) {
-            if(e.button == Mouse.Button.Code.LEFT && e.isPress() && mouseIn) {
-                order(SelectionDealer.class).requestSelection(this);
+            if(e.button == Mouse.Button.Code.LEFT && e.isPress() && seeCursor(true)) {
+                order(KeyboardDealer.class).requestKeyboard(this);
             }
         }
     }
 
     @Override
-    public Var<Boolean> selected() {
-        return Vars.set(false);
+    public HasKeyboard hasKeyboard() {
+        return HasKeyboard.NO;
     }
 
     @Override
-    public void depriveSelection() {}
+    public void depriveKeyboard() {}
 
     @Override
-    public void requestSelection() {
-        order(SelectionDealer.class).requestSelection(this);
+    public void requestKeyboard() {
+        order(KeyboardDealer.class).requestKeyboard(this);
+    }
+
+    @Override
+    public CursorOver acceptCursor(Located crd) {
+        if(contains(crd)) {
+            CursorOver brickCursorOver = CursorOver.NO;
+            for (var mo : $bricks.reverse().selectAs(MouseClient.class)) {
+                if (brickCursorOver != CursorOver.NO) mo.depriveCursor();
+                else brickCursorOver = mo.acceptCursor(crd);
+            }
+            return cursorOver = brickCursorOver == CursorOver.NO ? CursorOver.DIRECT : CursorOver.INDIRECT;
+        } else {
+            depriveCursor();
+            return CursorOver.NO;
+        }
+    }
+
+    @Override
+    public void depriveCursor() {
+        for(var mc : $bricks.list().selectAs(MouseClient.class)) {
+            mc.depriveCursor();
+        }
+        cursorOver = CursorOver.NO;
+    }
+
+    @Override
+    public CursorOver cursorOver() {
+        return cursorOver;
+    }
+
+    public void trapMouse(MouseClient client) {
+        mouseRoot = client;
+    }
+
+    public void freeMouse() {
+        mouseRoot = this;
+    }
+
+    public boolean mouseTrappedBy(Brick<?> brick) {
+        return mouseRoot == brick;
+    }
+
+    public class Rectangle extends RectangleSlab {
+
+        public Rectangle() {
+            super(Wall.this);
+        }
+    }
+
+    public class Circle extends CircleSlab {
+
+        public Circle() {
+            super(Wall.this);
+        }
+    }
+
+    public class Line extends BluntLineSlab {
+
+        public Line() {
+            super(Wall.this);
+        }
+    }
+
+    public class Text extends TextSlab {
+
+        public Text() {
+            super(Wall.this);
+        }
+    }
+
+    public class Button extends TextButtonBrick {
+
+        public Button() {
+            super(Wall.this);
+        }
+
+        public void onClick(Statement st) {
+            when(this::getClicks, (a, b) -> a < b, st);
+        }
+    }
+
+    public class Note extends IntercomBrick {
+
+        public Note() {
+            super(Wall.this);
+        }
+    }
+
+    public class AssistedNote extends AssistedIntercomBrick {
+
+        public AssistedNote() {
+            super(Wall.this);
+        }
     }
 }

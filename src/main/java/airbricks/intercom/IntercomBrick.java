@@ -2,86 +2,137 @@ package airbricks.intercom;
 
 import airbricks.PowerBrick;
 import airbricks.note.NoteBrick;
-import airbricks.selection.SelectionClient;
-import bricks.Located;
+import bricks.Color;
 import bricks.Sized;
-import bricks.graphic.Rectangle;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Slab;
+import bricks.slab.WithSlab;
 import bricks.input.Key;
+import bricks.input.Keyboard;
 import bricks.input.Mouse;
 import bricks.input.Story;
 import bricks.trade.Host;
+import bricks.var.Pull;
+import bricks.var.Push;
 import bricks.var.Var;
+import bricks.var.impulse.DiversityImpulse;
+import bricks.var.impulse.Impulse;
+import bricks.var.special.NumPull;
 import suite.suite.Subject;
 
 import static suite.suite.$uite.$;
 
-public class IntercomBrick extends PowerBrick<Host> implements Rectangle, SelectionClient {
+public class IntercomBrick extends PowerBrick<Host> implements WithSlab {
+
+    public boolean pressed;
+    public Push<Long> clicks;
+    public int click;
+
+    public final RectangleSlab background;
+    public final Pull<Color> backgroundColorDefault;
+    public final Pull<Color> backgroundColorSeeCursor;
+    public final Pull<Color> backgroundColorPressed;
+
+    public final RectangleSlab outline;
+    public final Pull<Color> outlineColorDefault;
+    public final Pull<Color> outlineColorSeeKeyboard;
+
+    public final NumPull outlineThick;
 
     protected NoteBrick note;
-
     private final Story story;
 
     public IntercomBrick(Host host) {
         super(host);
+
+        pressed = false;
+        click = 0;
+        clicks = Var.push(0L);
+
+        backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
+        backgroundColorSeeCursor = Var.pull(Color.hex("#212323"));
+        backgroundColorPressed = Var.pull(Color.hex("#191B1B"));
+
+        outlineColorDefault = Var.pull(Color.hex("#1e1a2c"));
+        outlineColorSeeKeyboard = Var.pull(Color.mix(1, .8, .6));
+
+        outlineThick = Var.num(4);
+
+        outline = new RectangleSlab(this) {{
+            color().let(() -> seeKeyboard() ?
+                    outlineColorSeeKeyboard.get() :
+                    outlineColorDefault.get());
+        }};
+
+        background = new RectangleSlab(this) {{
+            color().let(() -> pressed ?
+                    backgroundColorPressed.get() : seeCursor() ?
+                    backgroundColorSeeCursor.get() :
+                    backgroundColorDefault.get());
+            aim(outline);
+            adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
+        }};
 
         note = new NoteBrick(this);
         note.left().let(this.left().plus(10));
         note.y().let(this.y());
 
         adjust(Sized.relative(note, 20));
-        when(selected(), () -> {
-            note.select();
+        when(this::seeKeyboard, () -> {
+            note.hasKeyboard = HasKeyboard.SHARED;
+            note.showCursor();
             note.updateCursorPosition(true);
-        }, note::unselect);
+        }, () -> {
+            note.hasKeyboard = HasKeyboard.NO;
+            note.hideCursor();
+        });
 
         story = new Story(10);
-        $bricks.set(note);
+        $bricks.set(outline, background, note);
     }
 
-    @Override
-    public void frontUpdate() {
 
-        var input = input();
-        boolean mouseIn = mouseIn();
-        boolean leftButton = input.state.isPressed(Mouse.Button.Code.LEFT);
-        boolean leftButtonPressEvent = false;
-        boolean leftButtonReleaseEvent = false;
-        for(var e : input.getEvents().select(Mouse.ButtonEvent.class)) {
-            switch (e.button) {
-                case LEFT -> {
-                    if(e.isPress()) {
-                        leftButtonPressEvent = true;
+
+    @Override
+    public void update() {
+        var in = input();
+        var wall = wall();
+
+        for(var e : in.getEvents()) {
+            if(e instanceof Mouse.ButtonEvent be) {
+                if(be.button == Mouse.Button.Code.LEFT) {
+                    if(be.isPress()) {
+                        if(seeCursor()) {
+                            pressed = true;
+                            wall.trapMouse(this);
+                        }
+                    } else {
+                        if(pressed && seeCursor() && (!seeKeyboard() || !in.state.isPressed(Key.Code.SPACE))) {
+                            pressed = false;
+                            click();
+                        }
+                        if(wall.mouseTrappedBy(this)) {
+                            wall.freeMouse();
+                        }
                     }
-                    if(e.isRelease()) {
-                        leftButtonReleaseEvent = true;
+                }
+            } else if(e instanceof Keyboard.KeyEvent ke) {
+                if(seeKeyboard()) {
+                    if (ke.key == Key.Code.SPACE) {
+                        if (ke.isPress()) {
+                            pressed = true;
+                        } else if(ke.isRelease()) {
+                            if(pressed && !wall.mouseTrappedBy(this)){
+                                pressed = false;
+                                click();
+                            }
+                        }
                     }
                 }
             }
         }
 
-        var wall = wall();
-        if(leftButtonPressEvent && mouseIn) {
-            wall.trapMouse(this);
-        } else if(leftButtonReleaseEvent && wall.mouseTrappedBy(this)) {
-            wall.freeMouse();
-        }
-
-        if (selected().get()) {
-            if(mouseIn) mouseIn = contains(Located.of(input.state.mouseCursorX(), input.state.mouseCursorY()));
-            boolean space = input.state.isPressed(Key.Code.SPACE);
-            boolean pressState = space || (mouseIn && leftButton);
-            if(!pressState && (mouseIn && leftButtonReleaseEvent)) {
-                click();
-            }
-            press(pressState);
-            light(mouseIn && !pressState);
-        } else {
-            press(false);
-            light(mouseIn && !leftButton);
-            if(leftButtonPressEvent && mouseIn()) {
-                select();
-            }
-        }
+        super.update();
     }
 
     public Subject order(Subject $) {
@@ -91,15 +142,32 @@ public class IntercomBrick extends PowerBrick<Host> implements Rectangle, Select
         return super.order($);
     }
 
-    public Var<String> string() {
-        return note.string();
+    public void click() {
+        clicks.set(System.currentTimeMillis());
     }
 
-    public Var<Boolean> editable() {
-        return note.editable();
+    public Push<Long> clicks() {
+        return clicks;
+    }
+
+    public Pull<String> text() {
+        return note.text();
+    }
+
+    public boolean isEditable() {
+        return note.isEditable();
+    }
+
+    public void editable(boolean should) {
+        note.editable(should);
     }
 
     public NoteBrick getNote() {
         return note;
+    }
+
+    @Override
+    public Slab getShape() {
+        return outline;
     }
 }

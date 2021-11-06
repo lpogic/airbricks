@@ -4,14 +4,16 @@ import airbricks.assistance.AssistanceBrick;
 import airbricks.assistance.AssistanceClient;
 import airbricks.assistance.AssistanceDealer;
 import bricks.Color;
-import bricks.graphic.TextBrick;
+import bricks.input.Key;
+import bricks.slab.TextSlab;
 import bricks.input.Keyboard;
 import bricks.monitor.Monitor;
 import bricks.trade.Host;
-import bricks.var.Source;
+import bricks.var.Push;
 import bricks.var.Var;
-import bricks.var.Vars;
+import bricks.var.impulse.DiversityImpulse;
 import bricks.var.impulse.Impulse;
+import suite.suite.Subject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,71 +21,76 @@ import java.util.List;
 
 public class AssistedIntercomBrick extends IntercomBrick implements AssistanceClient {
 
+    public Push<Long> doubleClicks;
+    Impulse onDoubleClick;
+    boolean assisted;
+    Monitor pickListener;
+    Monitor unselectListener;
+    Impulse stringChange;
+
     AssistanceBrick assistance;
-    TextBrick supplement;
+    TextSlab supplement;
     List<String> advices;
 
     public AssistedIntercomBrick(Host host) {
         super(host);
-        advices = new ArrayList<>();
-        assisted = Vars.set(false);
-        assistanceShown = Vars.set(false);
+        doubleClicks = Var.push(0L);
+        clicks.act((p, n) -> {
+            if(n - p < 500) doubleClicks.set(n);
+        });
+        onDoubleClick = new DiversityImpulse<>(doubleClicks, 0L);
 
-        supplement = new TextBrick(this);
-        supplement.string().let(() -> {
-            var str = string().get();
+        advices = new ArrayList<>();
+        assisted = false;
+
+        supplement = new TextSlab(this);
+        supplement.text().let(() -> {
+            var str = text().get();
             for(var advice : advices) {
                 if(advice.startsWith(str)) {
                     return advice.substring(str.length());
                 }
             }
             return "";
-        }, string());
+        }, text());
         supplement.color().set(Color.hex("#585855"));
         supplement.left().let(note.right());
         supplement.bottom().let(note.bottom());
 
-        stringChange = string().willChange();
+        stringChange = text().willChange();
 
         $bricks.set(supplement);
     }
 
-    Impulse stringChange;
-
     @Override
-    public void frontUpdate() {
+    public void update() {
 
-        if (selected().get()) {
+        if (seeKeyboard()) {
             var input = input();
             for(var e : input.getEvents().select(Keyboard.KeyEvent.class)) {
                 switch (e.key) {
                     case DOWN, UP -> {
                         if(e.isHold()) {
-                            if(!assisted.get()) {
+                            if(!assisted) {
                                 e.suppress();
-                                requestAssistance();
-                            }
-                            if(!assistanceShown.get()) {
-                                e.suppress();
-                                assistance.lightFirst();
-                                showAssistance();
+                                requestAssistance(e.key == Key.Code.UP);
                             }
                         }
                     }
                     case ESCAPE -> {
-                        if(e.isPress()) {
-                            if (assistanceShown.get()) {
+                        if(e.isRelease()) {
+                            if (assisted) {
                                 e.suppress();
-                                hideAssistance();
+                                depriveAssistance();
                             }
                         }
                     }
                     case RIGHT -> {
                         if(e.isPress()) {
-                            if(note.cursorPosition().get() == note.string().get().length()) {
-                                note.paste(supplement.string().get());
-                                if(assistanceShown.get()) {
-                                    hideAssistance();
+                            if(note.cursorPosition().get() == note.text().get().length()) {
+                                note.paste(supplement.text().get());
+                                if(assisted) {
+                                    depriveAssistance();
                                 }
                             }
                         }
@@ -93,73 +100,60 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
         }
 
         if(stringChange.occur()) {
-            if(assisted.get()) {
-                var str = string().get();
+            if(assisted) {
+                var str = text().get();
                 assistance.setOptions(advices.stream().filter(s -> s.contains(str)).toList(), str);
             }
         }
 
-        super.frontUpdate();
+        if(onDoubleClick.occur()) {
+            if(!assisted) {
+                requestAssistance(false);
+            }
+        }
+
+        super.update();
     }
 
-    Var<Boolean> assisted;
-    Var<Boolean> assistanceShown;
-    Monitor pickListener;
-    Monitor unselectListener;
-
     @Override
-    public Source<Boolean> assisted() {
+    public boolean isAssisted() {
         return assisted;
     }
 
     @Override
     public void depriveAssistance() {
-        assisted.set(false);
-        showAssistance(false);
-        assistance = null;
-        $bricks.unset(pickListener, unselectListener);
-
+        if(assisted) {
+            assisted = false;
+            drop(pickListener, unselectListener);
+            wall().drop(assistance);
+            assistance = null;
+        }
     }
 
-    public void requestAssistance() {
+    public void requestAssistance(boolean preferTop) {
         var dealer = order(AssistanceDealer.class);
         var assistance = dealer.request(this);
         if(assistance != null) {
-            assistance.attach(this, advices);
+            assistance.attach(this, advices, preferTop);
             pickListener = when(assistance.picked()).then(() -> {
-                getNote().select(0, string().get().length());
+                getNote().select(0, text().get().length());
                 getNote().paste(advices.get(assistance.picked().get().value));
-                hideAssistance();
+                depriveAssistance();
             });
-            unselectListener = when(selected().willGive(false), this::hideAssistance);
-            assisted.set(true);
+            unselectListener = when(this::seeKeyboard, (a, b) -> !b, this::depriveAssistance);
+            assisted = true;
             this.assistance = assistance;
+            assistance.indicateFirst();
+            wall().lay(assistance);
         }
-    }
-
-    protected void showAssistance(boolean show) {
-        if(assistanceShown.get() != show) {
-            if(show) {
-                if(!assisted.get()) {
-                    requestAssistance();
-                }
-                wall().push(assistance);
-            } else {
-                wall().pop(assistance);
-            }
-            assistanceShown.set(show);
-        }
-    }
-
-    protected void showAssistance() {
-        showAssistance(true);
-    }
-
-    protected void hideAssistance() {
-        showAssistance(false);
     }
 
     public List<String> getAdvices() {
         return advices;
+    }
+
+    public void advices(Subject adv) {
+        advices.clear();
+        advices.addAll(adv.list().each().convert(Object::toString).toList());
     }
 }
