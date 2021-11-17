@@ -12,7 +12,10 @@ import airbricks.tool.ExclusiveToolDealer;
 import airbricks.tool.ToolDealer;
 import bricks.Color;
 import bricks.Located;
-import bricks.input.Mouse;
+import bricks.input.keyboard.Key;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.BluntLineSlab;
 import bricks.slab.CircleSlab;
 import bricks.slab.RectangleSlab;
@@ -122,11 +125,27 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
 
         super.update();
 
-        for(var e : input.getEvents().select(Mouse.ButtonEvent.class)) {
-            if(e.button == Mouse.Button.Code.LEFT && e.isPress() && seeCursor(true)) {
-                order(KeyboardDealer.class).requestKeyboard(this);
+        for(var e : input.getEvents()) {
+            if(e instanceof Mouse.ButtonEvent be) {
+                if (be.button == MouseButton.Code.LEFT && be.isPress() && seeCursor(true)) {
+                    order(KeyboardDealer.class).requestKeyboard(this);
+                }
+            } else if(e instanceof Keyboard.KeyEvent ke) {
+                if(ke.key == Key.Code.TAB && ke.isPress()) {
+                    acceptKeyboard(!ke.isShifted());
+                }
             }
         }
+    }
+
+    @Override
+    public Subject order(Subject trade) {
+        var t = trade.one();
+        if(t instanceof KeyboardClient.KeyboardTransfer kt) {
+            if(transferKeyboard(kt)) return $(true);
+            else return $(acceptKeyboard(kt.front()));
+        }
+        return super.order(trade);
     }
 
     @Override
@@ -142,11 +161,35 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         order(KeyboardDealer.class).requestKeyboard(this);
     }
 
+    protected boolean transferKeyboard(KeyboardClient.KeyboardTransfer transfer) {
+        var clients = (transfer.front() ?
+                bricks().front(transfer.current()) :
+                bricks().reverse(transfer.current()))
+                .skip(1)
+                .each(KeyboardClient.class);
+        for(var c : clients) {
+            if(c.acceptKeyboard(transfer.front())) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean acceptKeyboard(boolean front) {
+        var clients = (front ?
+                bricks().front() :
+                bricks().reverse())
+                .each(KeyboardClient.class);
+        for(var c : clients) {
+            if(c.acceptKeyboard(front)) return true;
+        }
+        return false;
+    }
+
     @Override
     public CursorOver acceptCursor(Located crd) {
         if(contains(crd)) {
             CursorOver brickCursorOver = CursorOver.NO;
-            for (var mo : $bricks.reverse().selectAs(MouseClient.class)) {
+            for (var mo : $bricks.reverse().each(MouseClient.class)) {
                 if (brickCursorOver != CursorOver.NO) mo.depriveCursor();
                 else brickCursorOver = mo.acceptCursor(crd);
             }
@@ -159,7 +202,7 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
 
     @Override
     public void depriveCursor() {
-        for(var mc : $bricks.list().selectAs(MouseClient.class)) {
+        for(var mc : $bricks.list().each(MouseClient.class)) {
             mc.depriveCursor();
         }
         cursorOver = CursorOver.NO;
@@ -181,6 +224,7 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public boolean mouseTrappedBy(Brick<?> brick) {
         return mouseRoot == brick;
     }
+
 
     public class Rectangle extends RectangleSlab {
 

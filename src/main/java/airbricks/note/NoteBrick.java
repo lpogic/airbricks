@@ -10,11 +10,12 @@ import bricks.Sized;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
 import bricks.font.LoadedFont;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.TextSlab;
 import bricks.slab.Shape;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
 import bricks.input.Story;
 import bricks.input.UserAction;
 import bricks.trade.Host;
@@ -136,7 +137,7 @@ public class NoteBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
         boolean mouseLeftButtonPress = false;
         for(var e : in.getEvents()) {
             if(e instanceof Mouse.ButtonEvent be) {
-                if(be.button == Mouse.Button.Code.LEFT) {
+                if(be.button == MouseButton.Code.LEFT) {
                     if(be.isPress()) {
                         if(seeCursor()) {
                             mouseLeftButtonPress = true;
@@ -146,7 +147,7 @@ public class NoteBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
             }
         }
         if(seeKeyboard()) {
-            if(in.state.isPressed(Mouse.Button.Code.LEFT)) {
+            if(in.state.isPressed(MouseButton.Code.LEFT)) {
                 updateCursorPosition(mouseLeftButtonPress);
             }
 

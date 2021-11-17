@@ -4,24 +4,26 @@ import airbricks.Airbrick;
 import airbricks.note.NoteBrick;
 import bricks.Color;
 import bricks.Sized;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
-import bricks.input.Key;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
+import bricks.input.keyboard.Key;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
 import bricks.trade.Contract;
 import bricks.trade.Host;
 import bricks.var.Pull;
+import bricks.var.Push;
 import bricks.var.Var;
 
 public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
 
-    public static final Contract<Boolean> INDICATE_REQUEST = new Contract<>();
+    public static final Contract<Boolean> MARK_REQUEST = Contract.emit();
 
     public boolean pressed;
-    public boolean indicated;
-    public int click;
+    public boolean mark;
+    public Push<Long> clicks;
 
     public final RectangleSlab background;
     protected final Pull<Color> backgroundColorDefault;
@@ -34,8 +36,8 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
         super(host);
 
         pressed = false;
-        indicated = false;
-        click = 0;
+        mark = false;
+        clicks = Var.push(0L);
 
         backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
         backgroundColorIndicated = Var.pull(Color.hex("#212323"));
@@ -43,7 +45,7 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
 
         background = new RectangleSlab(this) {{
             color().let(() -> pressed ?
-                    backgroundColorPressed.get() : indicated ?
+                    backgroundColorPressed.get() : mark ?
                     backgroundColorIndicated.get() :
                     backgroundColorDefault.get());
         }};
@@ -69,26 +71,28 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
         for(var e : in.getEvents()) {
             if(e instanceof Mouse.PositionEvent) {
                 if(seeCursor()) {
-                    if(!indicated) {
-                        indicate(order(INDICATE_REQUEST));
+                    if(!mark) {
+                        mark(order(MARK_REQUEST));
                     }
                 }
             } else if(e instanceof Keyboard.KeyEvent keyEvent) {
                 if(keyEvent.key == Key.Code.ENTER) {
                     if(keyEvent.isPress()) {
-                        if(indicated) click();
+                        if(mark) click();
                     }
                 }
             } else if(e instanceof Mouse.ButtonEvent be) {
-                if(be.button == Mouse.Button.Code.LEFT) {
+                if(be.button == MouseButton.Code.LEFT) {
                     if(be.isPress()) {
                         if(seeCursor()) {
                             pressed = true;
                         }
                     } else {
-                        if(pressed && seeCursor()) {
+                        if(pressed) {
                             pressed = false;
-                            click();
+                            if(seeCursor()) {
+                                click();
+                            }
                         }
                     }
                 }
@@ -102,20 +106,20 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
         return note.text();
     }
 
-    public boolean isIndicated() {
-        return indicated;
+    public boolean isMarked() {
+        return mark;
     }
 
-    public void indicate(boolean should) {
-        indicated = should;
+    public void mark(boolean should) {
+        mark = should;
     }
 
     public void click() {
-        ++click;
+        clicks.set(System.currentTimeMillis());
     }
 
-    public int getClicks() {
-        return click;
+    public Push<Long> clicks() {
+        return clicks;
     }
 
     @Override

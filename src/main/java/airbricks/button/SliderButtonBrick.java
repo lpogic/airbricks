@@ -3,10 +3,11 @@ package airbricks.button;
 import airbricks.Airbrick;
 import bricks.Color;
 import bricks.Sized;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
-import bricks.input.Mouse;
+import bricks.input.mouse.Mouse;
 import bricks.var.Pull;
 import bricks.var.Var;
 import bricks.var.special.NumPull;
@@ -77,7 +78,7 @@ public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab
                             host.bottom().getFloat() - h2));
                 }
             } else if(e instanceof Mouse.ButtonEvent be) {
-                if(be.button == Mouse.Button.Code.LEFT) {
+                if(be.button == MouseButton.Code.LEFT) {
                     if(be.isPress()) {
                         if(seeCursor()) {
                             pressed = true;

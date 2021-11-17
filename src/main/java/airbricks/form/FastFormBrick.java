@@ -167,11 +167,11 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Loca
             KeyboardClient s = trade.last().asExpected();
 
             KeyboardClient keyboardClient = null;
-            for(var sc : $bricks.reverse().selectAs(KeyboardClient.class)) {
+            for(var sc : $bricks.reverse().each(KeyboardClient.class)) {
                 if(s.equals(sc)) break;
                 keyboardClient = sc;
             }
-            if(keyboardClient == null) keyboardClient = $bricks.selectAs(KeyboardClient.class).cascade().nextOrNull();
+            if(keyboardClient == null) keyboardClient = $bricks.each(KeyboardClient.class).cascade().nextOrNull();
             keyboardClient.requestKeyboard();
             return $();
         }
@@ -179,11 +179,11 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Loca
             KeyboardClient s = trade.last().asExpected();
 
             KeyboardClient keyboardClient = null;
-            for(var sc : $bricks.selectAs(KeyboardClient.class)) {
+            for(var sc : $bricks.each(KeyboardClient.class)) {
                 if(s.equals(sc)) break;
                 keyboardClient = sc;
             }
-            if(keyboardClient == null) keyboardClient = $bricks.reverse().selectAs(KeyboardClient.class).cascade().nextOrNull();
+            if(keyboardClient == null) keyboardClient = $bricks.reverse().each(KeyboardClient.class).cascade().nextOrNull();
             keyboardClient.requestKeyboard();
             return $();
         }

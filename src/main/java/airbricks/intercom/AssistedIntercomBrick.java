@@ -4,49 +4,44 @@ import airbricks.assistance.AssistanceBrick;
 import airbricks.assistance.AssistanceClient;
 import airbricks.assistance.AssistanceDealer;
 import bricks.Color;
-import bricks.input.Key;
+import bricks.input.keyboard.Key;
 import bricks.slab.TextSlab;
-import bricks.input.Keyboard;
+import bricks.input.keyboard.Keyboard;
 import bricks.monitor.Monitor;
 import bricks.trade.Host;
 import bricks.var.Push;
 import bricks.var.Var;
-import bricks.var.impulse.DiversityImpulse;
 import bricks.var.impulse.Impulse;
 import suite.suite.Subject;
+import suite.suite.action.Statement;
 
-import java.util.ArrayList;
-import java.util.List;
+import static suite.suite.$uite.$;
 
 
 public class AssistedIntercomBrick extends IntercomBrick implements AssistanceClient {
 
     public Push<Long> doubleClicks;
-    Impulse onDoubleClick;
     boolean assisted;
-    Monitor pickListener;
     Monitor unselectListener;
-    Impulse stringChange;
 
     AssistanceBrick assistance;
     TextSlab supplement;
-    List<String> advices;
+    Subject advices;
 
     public AssistedIntercomBrick(Host host) {
         super(host);
         doubleClicks = Var.push(0L);
         clicks.act((p, n) -> {
-            if(n - p < 500) doubleClicks.set(n);
+            if(n - p < 300) doubleClicks.set(n);
         });
-        onDoubleClick = new DiversityImpulse<>(doubleClicks, 0L);
 
-        advices = new ArrayList<>();
+        advices = $();
         assisted = false;
 
         supplement = new TextSlab(this);
         supplement.text().let(() -> {
             var str = text().get();
-            for(var advice : advices) {
+            for(var advice : advices.list().each().convert(Object::toString)) {
                 if(advice.startsWith(str)) {
                     return advice.substring(str.length());
                 }
@@ -57,10 +52,14 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
         supplement.left().let(note.right());
         supplement.bottom().let(note.bottom());
 
-        stringChange = text().willChange();
+        whenTextChange = text().willChange();
+        whenDoubleClick = doubleClicks.willChange();
 
         $bricks.set(supplement);
     }
+
+    Impulse whenTextChange;
+    Impulse whenDoubleClick;
 
     @Override
     public void update() {
@@ -88,9 +87,11 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
                     case RIGHT -> {
                         if(e.isPress()) {
                             if(note.cursorPosition().get() == note.text().get().length()) {
-                                note.paste(supplement.text().get());
-                                if(assisted) {
-                                    depriveAssistance();
+                                if(!note.cars.isAny()) {
+                                    note.paste(supplement.text().get());
+                                    if (assisted) {
+                                        depriveAssistance();
+                                    }
                                 }
                             }
                         }
@@ -99,16 +100,18 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
             }
         }
 
-        if(stringChange.occur()) {
+        if(whenTextChange.occur()) {
             if(assisted) {
                 var str = text().get();
-                assistance.setOptions(advices.stream().filter(s -> s.contains(str)).toList(), str);
+                assistance.setOptions(advices.select(s -> s.raw().toString().contains(str)));
             }
         }
 
-        if(onDoubleClick.occur()) {
+        if(whenDoubleClick.occur()) {
             if(!assisted) {
                 requestAssistance(false);
+            } else {
+                depriveAssistance();
             }
         }
 
@@ -120,11 +123,18 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
         return assisted;
     }
 
+    Statement onAssistancePick = () -> {
+        getNote().select(0, text().get().length());
+        getNote().paste(assistance.picks().get().toString());
+        depriveAssistance();
+    };
+
     @Override
     public void depriveAssistance() {
         if(assisted) {
             assisted = false;
-            drop(pickListener, unselectListener);
+            assistance.picks().quit(onAssistancePick);
+            drop(unselectListener);
             wall().drop(assistance);
             assistance = null;
         }
@@ -135,25 +145,20 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
         var assistance = dealer.request(this);
         if(assistance != null) {
             assistance.attach(this, advices, preferTop);
-            pickListener = when(assistance.picked()).then(() -> {
-                getNote().select(0, text().get().length());
-                getNote().paste(advices.get(assistance.picked().get().value));
-                depriveAssistance();
-            });
+            assistance.picks().act(onAssistancePick);
             unselectListener = when(this::seeKeyboard, (a, b) -> !b, this::depriveAssistance);
             assisted = true;
             this.assistance = assistance;
-            assistance.indicateFirst();
             wall().lay(assistance);
         }
     }
 
-    public List<String> getAdvices() {
+    public Subject getAdvices() {
         return advices;
     }
 
     public void advices(Subject adv) {
-        advices.clear();
-        advices.addAll(adv.list().each().convert(Object::toString).toList());
+        advices.unset();
+        advices.alter(adv);
     }
 }

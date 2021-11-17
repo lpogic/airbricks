@@ -2,6 +2,7 @@ package airbricks.tool;
 
 import airbricks.Airbrick;
 import airbricks.Int;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.Shape;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
@@ -9,11 +10,11 @@ import airbricks.button.OptionButtonBrick;
 import bricks.Color;
 import bricks.Located;
 import bricks.slab.RectangleSlab;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
 import bricks.var.Pull;
-import bricks.wall.FantomBrick;
+import airbricks.FantomBrick;
 import suite.suite.Subject;
 import suite.suite.action.Action;
 
@@ -24,7 +25,7 @@ import static suite.suite.$uite.$;
 public class ToolBrick extends Airbrick<Host> implements WithSlab {
 
     RectangleSlab bg;
-    FantomBrick tools;
+    FantomBrick<Host> tools;
 
     boolean wrapped;
 
@@ -35,7 +36,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
     public ToolBrick(Host host) {
         super(host);
 
-        tools = new FantomBrick(this);
+        tools = new FantomBrick<>(this){};
 
         bg = new RectangleSlab(this){{
             color().set(Color.BLACK);
@@ -97,7 +98,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
         var b = tools.bricks();
         if(b.present()) {
             OptionButtonBrick pb = b.asExpected();
-            pb.indicate(order(OptionButtonBrick.INDICATE_REQUEST));
+            pb.mark(order(OptionButtonBrick.MARK_REQUEST));
         }
     }
 
@@ -108,26 +109,26 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
         var it = up_down ? bricks.reverse() : bricks.front();
         for(var button : it.eachAs(OptionButtonBrick.class)) {
             if(indicatedFound) {
-                button.indicate(indicatedLast);
+                button.mark(indicatedLast);
                 indicatedLast = false;
             } else {
-                indicatedLast = indicatedFound = button.isIndicated();
-                button.indicate(false);
+                indicatedLast = indicatedFound = button.isMarked();
+                button.mark(false);
             }
         }
         if(bricks.present()) {
             if (!indicatedFound || (indicatedLast && wrapped)) {
                 if (up_down) {
-                    bricks.last().as(OptionButtonBrick.class).indicate(true);
+                    bricks.last().as(OptionButtonBrick.class).mark(true);
                 }
                 else {
-                    bricks.first().as(OptionButtonBrick.class).indicate(true);
+                    bricks.first().as(OptionButtonBrick.class).mark(true);
                 }
             } else if(indicatedLast) {
                 if (up_down) {
-                    bricks.first().as(OptionButtonBrick.class).indicate(true);
+                    bricks.first().as(OptionButtonBrick.class).mark(true);
                 } else {
-                    bricks.last().as(OptionButtonBrick.class).indicate(true);
+                    bricks.last().as(OptionButtonBrick.class).mark(true);
                 }
             }
             optionIndicated = true;
@@ -173,7 +174,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
 
         for(var e : input.getEvents()) {
             if(e instanceof Mouse.ButtonEvent buttonEvent) {
-                if(buttonEvent.button == Mouse.Button.Code.LEFT) {
+                if(buttonEvent.button == MouseButton.Code.LEFT) {
                     if(buttonEvent.isPress()) {
                         if(mouseIn) {
                             wall.trapMouse(this);
@@ -219,7 +220,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
 
     @Override
     public Subject order(Subject trade) {
-        if(OptionButtonBrick.INDICATE_REQUEST.equals(trade.raw())) {
+        if(OptionButtonBrick.MARK_REQUEST.equals(trade.raw())) {
             dimOptions();
             return $(optionIndicated = true);
         }
@@ -228,7 +229,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
 
     public void dimOptions() {
         for(var b : tools.bricks().eachAs(OptionButtonBrick.class)) {
-            b.indicate(false);
+            b.mark(false);
         }
         optionIndicated = false;
     }

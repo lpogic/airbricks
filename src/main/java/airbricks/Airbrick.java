@@ -1,21 +1,19 @@
 package airbricks;
 
 import airbricks.button.TextButtonBrick;
+import airbricks.intercom.AssistedIntercomBrick;
 import airbricks.intercom.IntercomBrick;
 import bricks.Located;
 import bricks.slab.*;
 import bricks.trade.Host;
-import bricks.wall.Brick;
 import bricks.wall.MouseClient;
 import suite.suite.action.Statement;
 
-public abstract class Airbrick<H extends Host> extends Brick<H> implements MouseClient, Shape {
 
-    protected CursorOver cursorOver;
+public abstract class Airbrick<H extends Host> extends FantomBrick<H> implements Shape {
 
     public Airbrick(H host) {
         super(host);
-        cursorOver = CursorOver.NO;
     }
 
     @Override
@@ -27,7 +25,7 @@ public abstract class Airbrick<H extends Host> extends Brick<H> implements Mouse
     public CursorOver acceptCursor(Located crd) {
         if(contains(crd)) {
             CursorOver brickCursorOver = CursorOver.NO;
-            for (var mo : $bricks.reverse().list().selectAs(MouseClient.class)) {
+            for (var mo : $bricks.reverse().each(MouseClient.class)) {
                 if (brickCursorOver != CursorOver.NO) mo.depriveCursor();
                 else brickCursorOver = mo.acceptCursor(crd);
             }
@@ -36,19 +34,6 @@ public abstract class Airbrick<H extends Host> extends Brick<H> implements Mouse
             depriveCursor();
             return CursorOver.NO;
         }
-    }
-
-    @Override
-    public void depriveCursor() {
-        for(var mc : $bricks.list().selectAs(MouseClient.class)) {
-            mc.depriveCursor();
-        }
-        cursorOver = CursorOver.NO;
-    }
-
-    @Override
-    public CursorOver cursorOver() {
-        return cursorOver;
     }
 
     public class Rectangle extends RectangleSlab {
@@ -93,6 +78,13 @@ public abstract class Airbrick<H extends Host> extends Brick<H> implements Mouse
     public class Note extends IntercomBrick {
 
         public Note() {
+            super(Airbrick.this);
+        }
+    }
+
+    public class AssistedNote extends AssistedIntercomBrick {
+
+        public AssistedNote() {
             super(Airbrick.this);
         }
     }

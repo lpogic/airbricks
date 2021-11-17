@@ -3,13 +3,14 @@ package airbricks.switches;
 import airbricks.PowerBrick;
 import bricks.Color;
 import bricks.Sized;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.slab.TextSlab;
 import bricks.slab.WithSlab;
-import bricks.input.Key;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
+import bricks.input.keyboard.Key;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
 import bricks.var.Pull;
 import bricks.var.Var;
@@ -98,7 +99,7 @@ public class SwitchBrick extends PowerBrick<Host> implements WithSlab {
 
         for(var e : in.getEvents()) {
             if(e instanceof Mouse.ButtonEvent be) {
-                if(be.button == Mouse.Button.Code.LEFT) {
+                if(be.button == MouseButton.Code.LEFT) {
                     if(be.isPress()) {
                         if(seeCursor()) {
                             pressed = true;

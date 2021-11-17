@@ -4,19 +4,18 @@ import airbricks.PowerBrick;
 import airbricks.note.NoteBrick;
 import bricks.Color;
 import bricks.Sized;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
-import bricks.input.Key;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
+import bricks.input.keyboard.Key;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
 import bricks.input.Story;
 import bricks.trade.Host;
 import bricks.var.Pull;
 import bricks.var.Push;
 import bricks.var.Var;
-import bricks.var.impulse.DiversityImpulse;
-import bricks.var.impulse.Impulse;
 import bricks.var.special.NumPull;
 import suite.suite.Subject;
 
@@ -26,7 +25,6 @@ public class IntercomBrick extends PowerBrick<Host> implements WithSlab {
 
     public boolean pressed;
     public Push<Long> clicks;
-    public int click;
 
     public final RectangleSlab background;
     public final Pull<Color> backgroundColorDefault;
@@ -46,7 +44,6 @@ public class IntercomBrick extends PowerBrick<Host> implements WithSlab {
         super(host);
 
         pressed = false;
-        click = 0;
         clicks = Var.push(0L);
 
         backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
@@ -100,7 +97,7 @@ public class IntercomBrick extends PowerBrick<Host> implements WithSlab {
 
         for(var e : in.getEvents()) {
             if(e instanceof Mouse.ButtonEvent be) {
-                if(be.button == Mouse.Button.Code.LEFT) {
+                if(be.button == MouseButton.Code.LEFT) {
                     if(be.isPress()) {
                         if(seeCursor()) {
                             pressed = true;

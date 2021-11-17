@@ -2,24 +2,25 @@ package airbricks.assistance;
 
 import airbricks.Airbrick;
 import airbricks.PowerBrick;
-import airbricks.Int;
+import bricks.Color;
+import bricks.input.mouse.MouseButton;
 import bricks.slab.Shape;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
 import airbricks.button.OptionButtonBrick;
 import airbricks.button.SliderButtonBrick;
 import bricks.slab.RectangleSlab;
-import bricks.input.Keyboard;
-import bricks.input.Mouse;
-import bricks.monitor.Monitor;
+import bricks.input.keyboard.Keyboard;
+import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
-import bricks.var.Pull;
+import bricks.var.Push;
 import bricks.var.Var;
 import bricks.var.impulse.Constant;
 import bricks.var.impulse.Impulse;
 import bricks.var.special.NumPull;
-import bricks.wall.FantomBrick;
+import airbricks.FantomBrick;
 import suite.suite.Subject;
+import suite.suite.util.Series;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,165 +29,235 @@ import static suite.suite.$uite.$;
 
 public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
 
+    class OptionButtonSet extends FantomBrick<Host> {
+
+        List<OptionButton> availableOptionButtons;
+
+        public OptionButtonSet(Host host) {
+            super(host);
+            availableOptionButtons = new ArrayList<>();
+        }
+
+        public int size() {
+            return bricks().size();
+        }
+
+        public void setSize(int size) {
+            var currentSize = size();
+            if(currentSize > size) {
+                var bricks = bricks();
+                for(var k : bricks.reverse().first(currentSize - size).each()) bricks.unset(k);
+            } else if(currentSize < size) {
+                var bricks = bricks();
+                for(int i = currentSize;i < size;++i) {
+                    bricks.set(availableOptionButtons.get(i));
+                }
+            }
+        }
+
+        public OptionButton getMarked() {
+            for(var ob : bricks().eachAs(OptionButton.class)) {
+                if(ob.isMarked()) return ob;
+            }
+            return null;
+        }
+
+        public void markFirst(boolean uprising) {
+            var bricks = bricks();
+            var b = uprising ? bricks.reverse().first() : bricks.first();
+            if(b.present()) {
+                OptionButton ob = b.asExpected();
+                ob.mark(requestMark());
+            }
+        }
+
+        public void mark(int index) {
+            for(var ob : bricks().eachAs(OptionButton.class)) {
+                if(ob.getIndex() == index) {
+                    ob.mark(requestMark());
+                }
+            }
+        }
+
+        public boolean requestMark() {
+            for(var b : bricks().eachAs(OptionButton.class)) {
+                b.mark(false);
+            }
+            return true;
+        }
+
+        @Override
+        public Subject order(Subject trade) {
+            if(OptionButtonBrick.MARK_REQUEST.equals(trade.raw())) {
+                return $(requestMark());
+            }
+            return super.order(trade);
+        }
+    }
+
+    public class OptionButton extends OptionButtonBrick {
+        int index;
+
+        public OptionButton(int index) {
+            super(optionButtonSet);
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+    }
+
     RectangleSlab bg;
-    List<OptionButtonBrick> buttons;
-    FantomBrick usedButtons;
-    List<String> options;
-    String searchString;
+    OptionButtonSet optionButtonSet;
     SliderButtonBrick slider;
-    Pull<Integer> offset;
-    Pull<Int> picked;
+
+    List<Object> options;
+
+    Push<Integer> optionOffset;
+    Push<Object> picks;
 
     boolean wrapped;
+    boolean uprising;
+    int maxDisplayedOptions;
 
-    Monitor offsetMonitor;
+    Impulse optionsOffsetChange;
 
     public AssistanceBrick(Host host) {
         super(host);
 
-        picked = Var.let();
+        picks = Var.push(0);
         bg = new RectangleSlab(this);
+        bg.color().set(Color.BLACK);
         wrapped = false;
-        buttons = new ArrayList<>();
-        offset = Var.pull(0);
-        offsetMonitor = when(offset, this::updateButtons);
+        uprising = false;
+        optionOffset = Var.push(0);
+        optionButtonSet = new OptionButtonSet(this);
+        options = new ArrayList<>();
+        setMaxDisplayedOptions(3);
 
-        OptionButtonBrick prevButton = null;
-        for(int i = 0;i < 3; ++i) {
-            var button = new OptionButtonBrick(this);
-            button.width().let(bg.width());
-            button.x().let(bg.x());
-            if(i == 0) {
-                button.top().let(bg.top());
-            } else {
-                button.top().let(prevButton.bottom());
-            }
-            int finalI = i;
-            when(button::getClicks, (a, b) -> a < b, () -> pick(finalI + offset.get()));
-            buttons.add(button);
-            prevButton = button;
-        }
         bg.height().let(() -> {
-            float sum = 0f;
-            for(var b : usedButtons.bricks().eachAs(Shape.class)) {
+            float sum = 0;
+            for(var b : optionButtonSet.bricks().eachAs(Shape.class)) {
                 sum += b.height().getFloat();
             }
             return sum;
         });
-
-        usedButtons = new FantomBrick(this);
 
         slider = new SliderButtonBrick(this);
         slider.width().set(15);
         slider.height().set(40);
         slider.right().let(bg.right());
 
-        $bricks.set(usedButtons, slider);
+        optionsOffsetChange = optionOffset.willChange();
+
+        $bricks.set(optionButtonSet);
     }
 
-    public void pick(int i) {
-        picked.set(new Int(i));
+    public Object getOption(int index) {
+        if(uprising) {
+            return options.get(optionOffset.get() + optionButtonSet.size() - 1 - index);
+        } else return options.get(optionOffset.get() + index);
     }
 
-    public Pull<Int> picked() {
-        return picked;
+    public void pick(Object o) {
+        // TODO
     }
 
-    public void indicateFirst() {
-        var b = usedButtons.bricks();
-        if(b.present()) {
-            OptionButtonBrick pb = b.asExpected();
-            pb.indicate(requestIndication());
+    public Push<Object> picks() {
+        return picks;
+    }
+
+    public void setOptionOffset(int offset) {
+        optionOffset.set(offset);
+        var overlayOptions = options.size() - optionButtonSet.size();
+        var part = (bottom().getFloat() - top().getFloat() - slider.height().getFloat()) / overlayOptions;
+        if(uprising) {
+            slider.y().set(bottom().getFloat() - slider.height().getFloat() / 2 - part * offset);
+        } else {
+            slider.y().set(top().getFloat() + slider.height().getFloat() / 2 + part * offset);
         }
+        sliderYChange.occur();
     }
 
-    public void indicateNext(boolean up_down) {
-        boolean indicatedFound = false;
-        boolean indicatedLast = false;
-        var bricks = usedButtons.bricks();
-        var it = up_down ? bricks.reverse() : bricks.front();
-        for(var button : it.eachAs(OptionButtonBrick.class)) {
-            if(indicatedFound) {
-                button.indicate(indicatedLast);
-                indicatedLast = false;
+    public void setMaxDisplayedOptions(int max) {
+        var aobs = optionButtonSet.availableOptionButtons.size();
+        var button = aobs > 0 ? optionButtonSet.availableOptionButtons.get(aobs - 1) : null;
+        for(int i = aobs;i < max; ++i) {
+            var pb = button;
+            button = new OptionButton(i){{
+                width().let(bg.width());
+                x().let(bg.x());
+                if (index == 0) top().let(bg.top());
+                else top().let(pb.bottom());
+                text().let(() -> getOption(index).toString());
+                clicks().act(() -> picks.set(getOption(index)));
+            }};
+            optionButtonSet.availableOptionButtons.add(button);
+        }
+        maxDisplayedOptions = max;
+        optionButtonsRefresh();
+    }
+
+    public void markUpperOption() {
+        var ob = optionButtonSet.getMarked();
+        if(ob == null) {
+            optionButtonSet.markFirst(uprising);
+        } else {
+            var selectionIndex = ob.getIndex();
+            if (selectionIndex > 0) {
+                optionButtonSet.mark(selectionIndex - 1);
             } else {
-                indicatedLast = indicatedFound = button.isIndicated();
-                button.indicate(false);
-            }
-        }
-        if(bricks.present()) {
-            if (!indicatedFound || (indicatedLast && wrapped)) {
-                if (up_down) {
-                    bricks.last().as(OptionButtonBrick.class).indicate(true);
-                    slider.bottom().set(bottom().get());
-                }
-                else {
-                    bricks.first().as(OptionButtonBrick.class).indicate(true);
-                    slider.top().set(top().get());
-                }
-            } else if(indicatedLast) {
-                var off = offset.get();
-                var offMax = options.size() - bricks.size();
-                if (up_down) {
-                    if(off > 0) {
-                        offset.set(off - 1);
-                        slider.top().set(top().getFloat() + (off - 1f) / offMax *
-                                (height().getFloat() - slider.height().getFloat()));
+                var offset = optionOffset.get();
+                if(uprising) {
+                    var maxOffset = options.size() - optionButtonSet.size();
+                    if (offset < maxOffset) {
+                        setOptionOffset(offset + 1);
                     }
-                    bricks.first().as(OptionButtonBrick.class).indicate(true);
                 } else {
-                    if(off < offMax) {
-                        offset.set(off + 1);
-                        slider.top().set(top().getFloat() + (off + 1f) / offMax *
-                                (height().getFloat() - slider.height().getFloat()));
+                    if (offset > 0) {
+                        setOptionOffset(offset - 1);
                     }
-                    bricks.last().as(OptionButtonBrick.class).indicate(true);
                 }
             }
         }
     }
 
-    public void setWrapped(boolean wrapped) {
-        this.wrapped = wrapped;
-    }
-
-    public void setOptions(List<String> options) {
-        this.options = options;
-        this.searchString = null;
-        if(options.size() > buttons.size()) $bricks.set(slider);
-        else $bricks.unset(slider);
-        offset.set(0);
-        updateButtons();
-    }
-
-    public void setOptions(List<String> options, String searchString) {
-        this.options = options;
-        this.searchString = searchString;
-        if(options.size() > buttons.size()) $bricks.set(slider);
-        else $bricks.unset(slider);
-        offset.set(0);
-        updateButtons();
-    }
-
-    void updateButtons() {
-        var off = offset.get();
-        usedButtons.bricks().unset();
-        for(int i = 0;i < buttons.size();++i) {
-            var button = buttons.get(i);
-            var offI = i + off;
-            if(options.size() > offI) {
-                var str = options.get(offI);
-                if(searchString != null) {
-                    var index = str.indexOf(searchString);
-                    if (index >= 0) button.note.select(index, searchString.length());
-                    else button.note.select(0,0);
-                } else button.note.select(0,0);
-                button.text().set(str);
-                usedButtons.bricks().set(button);
+    public void markLowerOption() {
+        var ob = optionButtonSet.getMarked();
+        if(ob == null) {
+            optionButtonSet.markFirst(uprising);
+        } else {
+            var selectionIndex = ob.getIndex();
+            var maxIndex = optionButtonSet.size() - 1;
+            if (selectionIndex < maxIndex) {
+                optionButtonSet.mark(selectionIndex + 1);
             } else {
-                usedButtons.bricks().unset(button);
+                var offset = optionOffset.get();
+                if(uprising) {
+                    if (offset > 0) {
+                        setOptionOffset(offset - 1);
+                    }
+                } else {
+                    var maxOffset = options.size() - optionButtonSet.size();
+                    if (offset < maxOffset) {
+                        setOptionOffset(offset + 1);
+                    }
+                }
             }
         }
+    }
+
+    public void setWrapped(boolean should) {
+        wrapped = should;
+    }
+
+    public void setOptions(Series options) {
+        this.options = new ArrayList<>();
+        for(var o : options.list().each()) {
+            this.options.add(o);
+        }
+        optionButtonsRefresh();
     }
 
     public void attach(Shape shape, boolean preferTop) {
@@ -213,12 +284,16 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
         bg.width().let(shape.width());
     }
 
-    public void attach(PowerBrick<?> input, List<String> options, boolean preferTop) {
+    public void attach(PowerBrick<?> input, Subject options, boolean preferTop) {
+        uprising = preferTop;
+        optionOffset.set(0);
         setOptions(options);
-        offset.set(0);
-        updateButtons();
         attach(input, preferTop);
-        slider.y().set(top().getFloat() + slider.height().getFloat() / 2);
+        optionButtonsRefresh();
+        optionsOffsetChange.occur();
+        optionButtonSet.markFirst(uprising);
+        slider.y().set(uprising ? bottom().getFloat() - slider.height().getFloat() / 2 :
+                top().getFloat() + slider.height().getFloat() / 2);
         sliderYChange = slider.y().willChange();
     }
 
@@ -237,7 +312,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
 
         for(var e : input.getEvents()) {
             if(e instanceof Mouse.ButtonEvent buttonEvent) {
-                if(buttonEvent.button == Mouse.Button.Code.LEFT) {
+                if(buttonEvent.button == MouseButton.Code.LEFT) {
                     if(buttonEvent.isPress()) {
                         boolean mouseIn = seeCursor();
                         if(mouseIn) {
@@ -253,41 +328,49 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
                 switch (keyEvent.key) {
                     case DOWN -> {
                         if (keyEvent.isHold()) {
-                            indicateNext(false);
+                            markLowerOption();
                             keyEvent.suppress();
                         }
                     }
                     case UP -> {
                         if (keyEvent.isHold()) {
-                            indicateNext(true);
+                            markUpperOption();
                             keyEvent.suppress();
                         }
                     }
+                }
+            } else if(e instanceof Mouse.ScrollEvent se) {
+                if((se.y > 0 && !uprising) || (se.y < 0 && uprising)) {
+                    var offset = optionOffset.get();
+                    if (offset > 0) {
+                        setOptionOffset(offset - 1);
+                    }
+                    se.suppress();
+                } else if(se.y < 0 || se.y > 0) {
+                    var offset = optionOffset.get();
+                    var maxOffset = options.size() - optionButtonSet.size();
+                    if (offset < maxOffset) {
+                        setOptionOffset(offset + 1);
+                    }
+                    se.suppress();
                 }
             }
         }
 
         if(sliderYChange.occur()) {
             var part = (slider.top().getFloat() - top().getFloat()) / (height().getFloat() - slider.height().getFloat());
-            var maxOffset = options.size() - usedButtons.bricks().size();
-            offset.set(NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset));
+            var maxOffset = options.size() - optionButtonSet.bricks().size();
+            if(uprising) optionOffset.set(maxOffset - NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset));
+            else optionOffset.set(NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset));
         }
 
         super.update();
     }
 
-    @Override
-    public Subject order(Subject trade) {
-        if(OptionButtonBrick.INDICATE_REQUEST.equals(trade.raw())) {
-            return $(requestIndication());
-        }
-        return super.order(trade);
-    }
-
-    public boolean requestIndication() {
-        for(var b : buttons) {
-            b.indicate(false);
-        }
-        return true;
+    private void optionButtonsRefresh() {
+        int x = Math.min(maxDisplayedOptions, options.size());
+        if(x < options.size()) lay(slider);
+        else drop(slider);
+        optionButtonSet.setSize(x);
     }
 }
