@@ -14,7 +14,7 @@ import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
 import bricks.var.Pull;
 import bricks.var.Var;
-import bricks.var.special.NumPull;
+import bricks.var.num.NumPull;
 
 public class SwitchBrick extends PowerBrick<Host> implements WithSlab {
 

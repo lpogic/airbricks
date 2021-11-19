@@ -1,4 +1,4 @@
-package airbricks.intercom;
+package airbricks.note;
 
 import airbricks.assistance.AssistanceBrick;
 import airbricks.assistance.AssistanceClient;
@@ -18,7 +18,7 @@ import suite.suite.action.Statement;
 import static suite.suite.$uite.$;
 
 
-public class AssistedIntercomBrick extends IntercomBrick implements AssistanceClient {
+public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
 
     public Push<Long> doubleClicks;
     boolean assisted;
@@ -28,7 +28,7 @@ public class AssistedIntercomBrick extends IntercomBrick implements AssistanceCl
     TextSlab supplement;
     Subject advices;
 
-    public AssistedIntercomBrick(Host host) {
+    public AssistedNoteBrick(Host host) {
         super(host);
         doubleClicks = Var.push(0L);
         clicks.act((p, n) -> {

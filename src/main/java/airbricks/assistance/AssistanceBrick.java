@@ -17,7 +17,7 @@ import bricks.var.Push;
 import bricks.var.Var;
 import bricks.var.impulse.Constant;
 import bricks.var.impulse.Impulse;
-import bricks.var.special.NumPull;
+import bricks.var.num.NumPull;
 import airbricks.FantomBrick;
 import suite.suite.Subject;
 import suite.suite.util.Series;

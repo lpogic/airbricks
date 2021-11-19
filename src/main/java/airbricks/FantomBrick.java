@@ -1,11 +1,19 @@
 package airbricks;
 
+import airbricks.button.TextButtonBrick;
+import airbricks.note.AssistedNoteBrick;
+import airbricks.note.NoteBrick;
 import airbricks.selection.KeyboardClient;
 import bricks.Located;
+import bricks.slab.BluntLineSlab;
+import bricks.slab.CircleSlab;
+import bricks.slab.RectangleSlab;
+import bricks.slab.TextSlab;
 import bricks.trade.Host;
 import bricks.wall.Brick;
 import bricks.wall.MouseClient;
 import suite.suite.Subject;
+import suite.suite.action.Statement;
 
 import static suite.suite.$uite.$;
 
@@ -85,5 +93,58 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     @Override
     public HasKeyboard hasKeyboard() {
         return HasKeyboard.NO;
+    }
+
+    public class Rectangle extends RectangleSlab {
+
+        public Rectangle() {
+            super(FantomBrick.this);
+        }
+    }
+
+    public class Circle extends CircleSlab {
+
+        public Circle() {
+            super(FantomBrick.this);
+        }
+    }
+
+    public class Line extends BluntLineSlab {
+
+        public Line() {
+            super(FantomBrick.this);
+        }
+    }
+
+    public class Text extends TextSlab {
+
+        public Text() {
+            super(FantomBrick.this);
+        }
+    }
+
+    public class Button extends TextButtonBrick {
+
+        public Button() {
+            super(FantomBrick.this);
+        }
+
+        public void onClick(Statement st) {
+            when(this::getClicks, (a, b) -> a < b, st);
+        }
+    }
+
+    public class Note extends NoteBrick {
+
+        public Note() {
+            super(FantomBrick.this);
+        }
+    }
+
+    public class AssistedNote extends AssistedNoteBrick {
+
+        public AssistedNote() {
+            super(FantomBrick.this);
+        }
     }
 }

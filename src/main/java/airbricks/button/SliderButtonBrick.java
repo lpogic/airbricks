@@ -10,7 +10,7 @@ import bricks.slab.WithSlab;
 import bricks.input.mouse.Mouse;
 import bricks.var.Pull;
 import bricks.var.Var;
-import bricks.var.special.NumPull;
+import bricks.var.num.NumPull;
 
 public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab {
 

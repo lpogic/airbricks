@@ -12,8 +12,8 @@ open module airbricks {
     exports airbricks.selection;
     exports airbricks.switches;
     exports airbricks.tool;
+    exports airbricks.text;
     exports airbricks.note;
-    exports airbricks.intercom;
     exports airbricks.form;
     exports airbricks.table;
     exports airbricks;

@@ -3,7 +3,7 @@ package airbricks.form;
 import airbricks.Airbrick;
 import airbricks.PowerBrick;
 import airbricks.button.TextButtonBrick;
-import airbricks.note.NoteBrick;
+import airbricks.text.TextBrick;
 import airbricks.selection.KeyboardClient;
 import airbricks.table.Table;
 import bricks.Color;
@@ -13,7 +13,7 @@ import bricks.slab.RectangleSlab;
 import bricks.slab.Shape;
 import bricks.slab.WithShape;
 import bricks.var.Var;
-import bricks.var.special.NumPull;
+import bricks.var.num.NumPull;
 import bricks.wall.Brick;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
@@ -81,7 +81,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Loca
         int row = table.rowsSize() - 1;
         var sector = table.sector(0, row);
 
-        NoteBrick note = new NoteBrick(this) {{
+        TextBrick note = new TextBrick(this) {{
             text().set(label);
         }};
         note.y().let(sector.y());

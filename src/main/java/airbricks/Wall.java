@@ -3,8 +3,8 @@ package airbricks;
 import airbricks.assistance.AssistanceDealer;
 import airbricks.assistance.ExclusiveAssistanceDealer;
 import airbricks.button.TextButtonBrick;
-import airbricks.intercom.AssistedIntercomBrick;
-import airbricks.intercom.IntercomBrick;
+import airbricks.note.AssistedNoteBrick;
+import airbricks.note.NoteBrick;
 import airbricks.selection.ExclusiveKeyboardDealer;
 import airbricks.selection.KeyboardClient;
 import airbricks.selection.KeyboardDealer;
@@ -265,14 +265,14 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         }
     }
 
-    public class Note extends IntercomBrick {
+    public class Note extends NoteBrick {
 
         public Note() {
             super(Wall.this);
         }
     }
 
-    public class AssistedNote extends AssistedIntercomBrick {
+    public class AssistedNote extends AssistedNoteBrick {
 
         public AssistedNote() {
             super(Wall.this);

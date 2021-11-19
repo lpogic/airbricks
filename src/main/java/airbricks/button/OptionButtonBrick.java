@@ -1,7 +1,7 @@
 package airbricks.button;
 
 import airbricks.Airbrick;
-import airbricks.note.NoteBrick;
+import airbricks.text.TextBrick;
 import bricks.Color;
 import bricks.Sized;
 import bricks.input.mouse.MouseButton;
@@ -30,7 +30,7 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
     protected final Pull<Color> backgroundColorIndicated;
     protected final Pull<Color> backgroundColorPressed;
 
-    public final NoteBrick note;
+    public final TextBrick note;
 
     public OptionButtonBrick(Host host) {
         super(host);
@@ -50,7 +50,7 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
                     backgroundColorDefault.get());
         }};
 
-        note = new NoteBrick(this) {{
+        note = new TextBrick(this) {{
             text.color().set(Color.hex("#1d100e0"));
             y().let(OptionButtonBrick.this.y());
             left().let(OptionButtonBrick.this.left().plus(10));

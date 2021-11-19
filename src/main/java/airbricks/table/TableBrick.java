@@ -8,7 +8,7 @@ import bricks.slab.RectangleSlab;
 import bricks.slab.Printable;
 import bricks.slab.Shape;
 import bricks.trade.Host;
-import bricks.var.special.NumPull;
+import bricks.var.num.NumPull;
 import bricks.wall.Updatable;
 
 import static suite.suite.$uite.$;

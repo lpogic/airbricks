@@ -1,4 +1,4 @@
-package airbricks.note;
+package airbricks.text;
 
 import airbricks.Airbrick;
 import bricks.Color;
@@ -12,13 +12,13 @@ import bricks.slab.WithShape;
 import bricks.var.Pull;
 import bricks.var.Var;
 
-public class NoteCars extends Airbrick<NoteBrick> implements WithShape {
+public class TextCars extends Airbrick<TextBrick> implements WithShape {
 
     RectangleSlab body;
     Pull<Integer> headIndex;
     Pull<Integer> tailIndex;
 
-    public NoteCars(NoteBrick note) {
+    public TextCars(TextBrick note) {
         super(note);
 
         headIndex = Var.pull(0);

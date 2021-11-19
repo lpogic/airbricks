@@ -3,8 +3,8 @@ package airbricks.table;
 import bricks.slab.Shape;
 import bricks.var.Source;
 import bricks.var.Var;
-import bricks.var.special.NumPull;
-import bricks.var.special.NumSource;
+import bricks.var.num.NumPull;
+import bricks.var.num.NumSource;
 
 public interface Tabular extends Shape {
     Tabular sector(int column, int row);
