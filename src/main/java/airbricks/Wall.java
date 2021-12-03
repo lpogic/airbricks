@@ -148,8 +148,22 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         if(t instanceof KeyboardClient.KeyboardTransfer kt) {
             if(transferKeyboard(kt)) return $(true);
             else return $(acceptKeyboard(kt.front()));
+        } else if(t instanceof Defaults d) {
+            return $resources.in(Defaults.class).in(d.object()).get();
         }
         return super.order(trade);
+    }
+
+    public Subject getDefaults(Object o) {
+        var defaults = order($(new Defaults(o)));
+        for(Class<?> c = o.getClass();!Object.class.equals(c);c = c.getSuperclass()) {
+            defaults = order($(new Defaults(c))).alter(defaults);
+        }
+        return defaults;
+    }
+
+    public Sub defaults() {
+        return $resources.in(Defaults.class);
     }
 
     @Override
@@ -233,12 +247,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class Rectangle extends RectangleSlab {
 
         public Rectangle() {
-            super(Wall.this);
+            this($());
         }
 
         public Rectangle(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -260,12 +274,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class Circle extends CircleSlab {
 
         public Circle() {
-            super(Wall.this);
+            this($());
         }
 
         public Circle(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -286,12 +300,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class Line extends BluntLineSlab {
 
         public Line() {
-            super(Wall.this);
+            this($());
         }
 
         public Line(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -315,12 +329,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class Text extends TextSlab {
 
         public Text() {
-            super(Wall.this);
+            this($());
         }
 
         public Text(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -342,12 +356,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class Button extends TextButtonBrick {
 
         public Button() {
-            super(Wall.this);
+            this($());
         }
 
         public Button(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -382,12 +396,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class Note extends NoteBrick {
 
         public Note() {
-            super(Wall.this);
+            this($());
         }
 
         public Note(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -415,12 +429,12 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
     public class AssistedNote extends AssistedNoteBrick {
 
         public AssistedNote() {
-            super(Wall.this);
+            this($());
         }
 
         public AssistedNote(Subject data) {
-            this();
-            setup(data);
+            super(Wall.this);
+            setup($().alter(Wall.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {

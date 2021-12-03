@@ -25,10 +25,12 @@ import static suite.suite.$uite.$;
 public abstract class FantomBrick<H extends Host> extends Brick<H> implements MouseClient, KeyboardClient {
 
     protected CursorOver cursorOver;
+    protected Subject $resources;
 
     public FantomBrick(H host) {
         super(host);
         cursorOver = CursorOver.NO;
+        $resources = $();
     }
 
     @Override
@@ -60,8 +62,22 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
         if(t instanceof KeyboardClient.KeyboardTransfer kt) {
             if(transferKeyboard(kt)) return $(true);
             else return super.order($(new KeyboardClient.KeyboardTransfer(this, kt.front())));
+        } else if(t instanceof Defaults d) {
+            return getHost().order($(d)).alter($resources.in(Defaults.class).in(d.object()));
         }
         return super.order(trade);
+    }
+
+    public Subject getDefaults(Object o) {
+        var defaults = order($(new Defaults(o)));
+        for(Class<?> c = o.getClass();!Object.class.equals(c);c = c.getSuperclass()) {
+            defaults = order($(new Defaults(c))).alter(defaults);
+        }
+        return defaults;
+    }
+
+    public Sub defaults() {
+        return $resources.in(Defaults.class);
     }
 
     protected boolean transferKeyboard(KeyboardClient.KeyboardTransfer transfer) {
@@ -103,12 +119,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class Rectangle extends RectangleSlab {
 
         public Rectangle() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public Rectangle(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -130,12 +146,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class Circle extends CircleSlab {
 
         public Circle() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public Circle(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -156,12 +172,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class Line extends BluntLineSlab {
 
         public Line() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public Line(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -185,12 +201,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class Text extends TextSlab {
 
         public Text() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public Text(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -212,12 +228,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class Button extends TextButtonBrick {
 
         public Button() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public Button(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -252,12 +268,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class Note extends NoteBrick {
 
         public Note() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public Note(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
@@ -285,12 +301,12 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     public class AssistedNote extends AssistedNoteBrick {
 
         public AssistedNote() {
-            super(FantomBrick.this);
+            this($());
         }
 
         public AssistedNote(Subject data) {
-            this();
-            setup(data);
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
         }
 
         public void setup(Subject data) {
