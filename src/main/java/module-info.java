@@ -9,7 +9,7 @@ open module airbricks {
 
     exports airbricks.button;
     exports airbricks.assistance;
-    exports airbricks.selection;
+    exports airbricks.keyboard;
     exports airbricks.switches;
     exports airbricks.tool;
     exports airbricks.text;

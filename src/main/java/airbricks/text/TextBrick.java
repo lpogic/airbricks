@@ -1,8 +1,8 @@
 package airbricks.text;
 
 import airbricks.Airbrick;
-import airbricks.selection.KeyboardClient;
-import airbricks.selection.KeyboardDealer;
+import airbricks.keyboard.KeyboardClient;
+import airbricks.keyboard.KeyboardDealer;
 import bricks.Color;
 import bricks.Location;
 import bricks.Located;

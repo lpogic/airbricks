@@ -13,20 +13,14 @@ import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
 import bricks.var.Pull;
+import bricks.var.Push;
 import bricks.var.Var;
 import bricks.var.num.NumPull;
 
 public class TextButtonBrick extends PowerBrick<Host> implements WithSlab {
 
-//    public static final Contract<Supplier<Color>> BACKGROUND_COLOR = new Contract<>();
-//    public static final Contract<Supplier<Color>> SEE_CURSOR_BACKGROUND_COLOR = new Contract<>();
-//    public static final Contract<Supplier<Color>> PRESSED_BACKGROUND_COLOR = new Contract<>();
-//    public static final Contract<Supplier<Color>> OUTLINE_COLOR = new Contract<>();
-//    public static final Contract<Supplier<Color>> SEE_KEYBOARD_OUTLINE_COLOR = new Contract<>();
-
-
     public boolean pressed;
-    public int click;
+    public Push<Long> clicks;
 
     public final RectangleSlab background;
     public final Pull<Color> backgroundColorDefault;
@@ -45,12 +39,7 @@ public class TextButtonBrick extends PowerBrick<Host> implements WithSlab {
         super(host);
 
         pressed = false;
-        click = 0;
-
-//        backgroundColorDefault = Vars.let(order(BACKGROUND_COLOR));
-//        backgroundColorSeeCursor = Vars.let(order(SEE_CURSOR_BACKGROUND_COLOR));
-//        backgroundColorPressed = Vars.let(order(PRESSED_BACKGROUND_COLOR));
-
+        clicks = Var.push();
 
         backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
         backgroundColorSeeCursor = Var.pull(Color.hex("#212323"));
@@ -99,8 +88,6 @@ public class TextButtonBrick extends PowerBrick<Host> implements WithSlab {
                         if(seeCursor()) {
                             pressed = true;
                             wall.trapMouse(this);
-                        } else {
-                            click = 0;
                         }
                     } else {
                         if(pressed && seeCursor() && (!seeKeyboard() || !in.state.isPressed(Key.Code.SPACE))) {
@@ -132,12 +119,13 @@ public class TextButtonBrick extends PowerBrick<Host> implements WithSlab {
     }
 
     public void click() {
-        ++click;
+        clicks.set(System.currentTimeMillis());
     }
 
-    public int getClicks() {
-        return click;
+    public Push<Long> clicks() {
+        return clicks;
     }
+
 
     public Pull<String> text() {
         return text.text();

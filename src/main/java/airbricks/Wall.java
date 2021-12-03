@@ -5,9 +5,9 @@ import airbricks.assistance.ExclusiveAssistanceDealer;
 import airbricks.button.TextButtonBrick;
 import airbricks.note.AssistedNoteBrick;
 import airbricks.note.NoteBrick;
-import airbricks.selection.ExclusiveKeyboardDealer;
-import airbricks.selection.KeyboardClient;
-import airbricks.selection.KeyboardDealer;
+import airbricks.keyboard.ExclusiveKeyboardDealer;
+import airbricks.keyboard.KeyboardClient;
+import airbricks.keyboard.KeyboardDealer;
 import airbricks.tool.ExclusiveToolDealer;
 import airbricks.tool.ToolDealer;
 import bricks.Color;
@@ -20,13 +20,17 @@ import bricks.slab.BluntLineSlab;
 import bricks.slab.CircleSlab;
 import bricks.slab.RectangleSlab;
 import bricks.slab.TextSlab;
+import bricks.var.Pull;
 import bricks.wall.Brick;
 import bricks.wall.MouseClient;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLUtil;
+import suite.suite.Sub;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
+
+import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
@@ -231,12 +235,51 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         public Rectangle() {
             super(Wall.this);
         }
+
+        public Rectangle(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "w", "width" -> pullNumber(width(), d.in());
+                        case "h", "height" -> pullNumber(height(), d.in());
+                        case "color" -> pullColor(color(), d.in());
+                    }
+                }
+            }
+        }
     }
 
     public class Circle extends CircleSlab {
 
         public Circle() {
             super(Wall.this);
+        }
+
+        public Circle(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "r", "radius" -> pullNumber(radius(), d.in());
+                        case "color" -> pullColor(color(), d.in());
+                    }
+                }
+            }
         }
     }
 
@@ -245,12 +288,54 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         public Line() {
             super(Wall.this);
         }
+
+        public Line(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "x0" -> pullNumber(begin().x(), d.in());
+                        case "y0" -> pullNumber(begin().y(), d.in());
+                        case "aim0" -> begin().aim(d.in().one());
+                        case "x1" -> pullNumber(end().x(), d.in());
+                        case "y1" -> pullNumber(end().y(), d.in());
+                        case "aim1" -> end().aim(d.in().one());
+                        case "thick" -> pullNumber(thick(), d.in());
+                        case "color" -> pullColor(color(), d.in());
+                    }
+                }
+            }
+        }
     }
 
     public class Text extends TextSlab {
 
         public Text() {
             super(Wall.this);
+        }
+
+        public Text(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "text" -> pullString(text(), d.in());
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "height" -> pullNumber(height(), d.in());
+                        case "color" -> pullColor(color(), d.in());
+                    }
+                }
+            }
         }
     }
 
@@ -260,8 +345,37 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
             super(Wall.this);
         }
 
+        public Button(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "text" -> pullString(text(), d.in());
+                        case "textColor" -> pullColor(text.color(), d.in());
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "w", "width" -> pullNumber(width(), d.in());
+                        case "background" -> pullColor(backgroundColorDefault, d.in());
+                        case "backgroundSeeCursor" -> pullColor(backgroundColorSeeCursor, d.in());
+                        case "backgroundPressed" -> pullColor(backgroundColorPressed, d.in());
+                        case "outlineColor" -> pullColor(outlineColorDefault, d.in());
+                        case "outlineColorSeeKeyboard" -> pullColor(outlineColorSeeKeyboard, d.in());
+                        case "outlineThick" -> pullNumber(outlineThick, d.in());
+                        case "onClick" -> {
+                            if(d.in().is(Statement.class)) clicks().act(d.in().as(Statement.class));
+                        }
+                    }
+                }
+            }
+        }
+
         public void onClick(Statement st) {
-            when(this::getClicks, (a, b) -> a < b, st);
+            clicks().act(st);
         }
     }
 
@@ -270,6 +384,32 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         public Note() {
             super(Wall.this);
         }
+
+        public Note(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "text" -> pullString(text(), d.in());
+                        case "textColor" -> pullColor(note.text.color(), d.in());
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "w", "width" -> pullNumber(width(), d.in());
+                        case "background" -> pullColor(backgroundColorDefault, d.in());
+                        case "backgroundSeeCursor" -> pullColor(backgroundColorSeeCursor, d.in());
+                        case "backgroundPressed" -> pullColor(backgroundColorPressed, d.in());
+                        case "outlineColor" -> pullColor(outlineColorDefault, d.in());
+                        case "outlineColorSeeKeyboard" -> pullColor(outlineColorSeeKeyboard, d.in());
+                        case "outlineThick" -> pullNumber(outlineThick, d.in());
+                    }
+                }
+            }
+        }
     }
 
     public class AssistedNote extends AssistedNoteBrick {
@@ -277,5 +417,46 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
         public AssistedNote() {
             super(Wall.this);
         }
+
+        public AssistedNote(Subject data) {
+            this();
+            setup(data);
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "advices" -> advices(d.in().get());
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "w", "width" -> pullNumber(width(), d.in());
+                        case "background" -> pullColor(backgroundColorDefault, d.in());
+                        case "backgroundSeeCursor" -> pullColor(backgroundColorSeeCursor, d.in());
+                        case "backgroundPressed" -> pullColor(backgroundColorPressed, d.in());
+                        case "outlineColor" -> pullColor(outlineColorDefault, d.in());
+                        case "outlineColorSeeKeyboard" -> pullColor(outlineColorSeeKeyboard, d.in());
+                        case "outlineThick" -> pullNumber(outlineThick, d.in());
+                    }
+                }
+            }
+        }
+    }
+
+    private static void pullNumber(Pull<Number> p, Sub v) {
+        if(v.is(Supplier.class)) p.let(v.one());
+        else if(v.is(Number.class)) p.set(v.one());
+    }
+
+    private static void pullString(Pull<String> p, Sub v) {
+        if(v.is(Supplier.class)) p.let(v.one());
+        else if(v.is(String.class)) p.set(v.one());
+    }
+
+    private static void pullColor(Pull<Color> p, Sub v) {
+        if(v.is(Supplier.class)) p.let(v.one());
+        else if(v.is(Color.class)) p.set(v.one());
+        else if(v.is(String.class)) p.set(Color.hex(v.asString()));
     }
 }

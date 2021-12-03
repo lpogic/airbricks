@@ -1,4 +1,4 @@
-package airbricks.selection;
+package airbricks.keyboard;
 
 public class ExclusiveKeyboardDealer implements KeyboardDealer {
 

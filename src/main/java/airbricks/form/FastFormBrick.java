@@ -4,7 +4,7 @@ import airbricks.Airbrick;
 import airbricks.PowerBrick;
 import airbricks.button.TextButtonBrick;
 import airbricks.text.TextBrick;
-import airbricks.selection.KeyboardClient;
+import airbricks.keyboard.KeyboardClient;
 import airbricks.table.Table;
 import bricks.Color;
 import bricks.Location;

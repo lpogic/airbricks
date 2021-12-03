@@ -1,7 +1,7 @@
 package airbricks;
 
-import airbricks.selection.KeyboardClient;
-import airbricks.selection.KeyboardDealer;
+import airbricks.keyboard.KeyboardClient;
+import airbricks.keyboard.KeyboardDealer;
 import bricks.input.keyboard.Key;
 import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.MouseButton;
