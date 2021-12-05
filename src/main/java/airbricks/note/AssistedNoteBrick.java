@@ -12,6 +12,7 @@ import bricks.trade.Host;
 import bricks.var.Push;
 import bricks.var.Var;
 import bricks.var.impulse.Impulse;
+import bricks.var.subject.SubjectPush;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
 
@@ -26,7 +27,7 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
 
     AssistanceBrick assistance;
     TextSlab supplement;
-    Subject advices;
+    final SubjectPush advices;
 
     public AssistedNoteBrick(Host host) {
         super(host);
@@ -35,7 +36,7 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
             if(n - p < 300) doubleClicks.set(n);
         });
 
-        advices = $();
+        advices = new SubjectPush();
         assisted = false;
 
         supplement = new TextSlab(this);
@@ -47,18 +48,20 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
                 }
             }
             return "";
-        }, text());
+        }, text(), advices.changes());
         supplement.color().set(Color.hex("#585855"));
         supplement.left().let(note.right());
         supplement.bottom().let(note.bottom());
 
         whenTextChange = text().willChange();
+        whenAdvicesChange = advices.changes().willChange();
         whenDoubleClick = doubleClicks.willChange();
 
         $bricks.set(supplement);
     }
 
     Impulse whenTextChange;
+    Impulse whenAdvicesChange;
     Impulse whenDoubleClick;
 
     @Override
@@ -100,7 +103,7 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
             }
         }
 
-        if(whenTextChange.occur()) {
+        if(whenTextChange.occur() | whenAdvicesChange.occur()) {
             if(assisted) {
                 var str = text().get();
                 assistance.setOptions(advices.select(s -> s.raw().toString().contains(str)));
@@ -153,12 +156,7 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
         }
     }
 
-    public Subject getAdvices() {
+    public Subject advices() {
         return advices;
-    }
-
-    public void advices(Subject adv) {
-        advices.unset();
-        advices.alter(adv);
     }
 }

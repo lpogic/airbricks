@@ -147,7 +147,7 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
         return clicks;
     }
 
-    public Pull<String> text() {
+    public Push<String> text() {
         return note.text();
     }
 

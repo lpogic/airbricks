@@ -89,7 +89,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
         }
         float width = 100;
         for (var opb : tools.bricks().eachAs(OptionButtonBrick.class)) {
-            width = Float.max(width, opb.note.text.width().getFloat() + 20);
+            width = Float.max(width, opb.textSlab.width().getFloat() + 20);
         }
         bg.width().set(width);
     }

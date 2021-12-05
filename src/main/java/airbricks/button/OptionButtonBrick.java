@@ -7,6 +7,7 @@ import bricks.Sized;
 import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
+import bricks.slab.TextSlab;
 import bricks.slab.WithSlab;
 import bricks.input.keyboard.Key;
 import bricks.input.keyboard.Keyboard;
@@ -30,7 +31,7 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
     protected final Pull<Color> backgroundColorIndicated;
     protected final Pull<Color> backgroundColorPressed;
 
-    public final TextBrick note;
+    public final TextSlab textSlab;
 
     public OptionButtonBrick(Host host) {
         super(host);
@@ -50,15 +51,15 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
                     backgroundColorDefault.get());
         }};
 
-        note = new TextBrick(this) {{
-            text.color().set(Color.hex("#1d100e0"));
+        textSlab = new TextSlab(this) {{
+            color().set(Color.hex("#1d100e0"));
             y().let(OptionButtonBrick.this.y());
             left().let(OptionButtonBrick.this.left().plus(10));
         }};
 
-        adjust(Sized.relative(note, 40, 20));
+        adjust(Sized.relative(textSlab, 40, 20));
 
-        $bricks.set(background, note);
+        $bricks.set(background, textSlab);
     }
 
     @Override
@@ -103,7 +104,7 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
     }
 
     public Pull<String> text() {
-        return note.text();
+        return textSlab.text();
     }
 
     public boolean isMarked() {

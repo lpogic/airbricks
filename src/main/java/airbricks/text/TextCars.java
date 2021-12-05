@@ -32,24 +32,24 @@ public class TextCars extends Airbrick<TextBrick> implements WithShape {
 
         body.left().let(() -> {
             int begin = getMinIndex();
-            LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
-            float xOffset = font.getStringWidth(host.text.text().get().substring(0, begin), host.text.height().getFloat());
-            return host.text.left().getFloat() + xOffset;
-        }, host.height(), host.text.font(), host.left(), headIndex, tailIndex);
+            LoadedFont font = order(FontManager.class).getFont(host.textSlab.font().get());
+            float xOffset = font.getStringWidth(host.textSlab.text().get().substring(0, begin), host.textSlab.height().getFloat());
+            return host.textSlab.left().getFloat() + xOffset;
+        }, host.height(), host.textSlab.font(), host.left(), headIndex, tailIndex);
 
         body.y().let(() -> {
-            TextSlab text = host.text;
+            TextSlab text = host.textSlab;
             BackedFont font = order(FontManager.class).getFont(text.font().get(), text.height().getFloat());
             return text.y().getFloat() + font.getScaledDescent() / 2;
         });
 
         body.width().let(() -> {
             var minMax = getMinMax();
-            String str = host.text.text().get();
-            LoadedFont font = order(FontManager.class).getFont(host.text.font().get());
+            String str = host.textSlab.text().get();
+            LoadedFont font = order(FontManager.class).getFont(host.textSlab.font().get());
             str = substr(str, minMax.min, minMax.max);
-            return font.getStringWidth(str, host.text.height().getFloat());
-        }, host.text.font(), host.text(), host.height(), headIndex, tailIndex);
+            return font.getStringWidth(str, host.textSlab.height().getFloat());
+        }, host.textSlab.font(), host.text(), host.height(), headIndex, tailIndex);
 
         $bricks.set(body);
     }
