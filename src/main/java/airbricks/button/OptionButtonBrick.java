@@ -1,7 +1,6 @@
 package airbricks.button;
 
 import airbricks.Airbrick;
-import airbricks.text.TextBrick;
 import bricks.Color;
 import bricks.Sized;
 import bricks.input.mouse.MouseButton;

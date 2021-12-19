@@ -121,8 +121,6 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
     boolean uprising;
     int maxDisplayedOptions;
 
-    Impulse optionsOffsetChange;
-
     public AssistanceBrick(Host host) {
         super(host);
 
@@ -148,8 +146,6 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
         slider.width().set(15);
         slider.height().set(40);
         slider.right().let(bg.right());
-
-        optionsOffsetChange = optionOffset.willChange();
 
         $bricks.set(optionButtonSet);
     }
@@ -257,6 +253,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
         for(var o : options.list().each()) {
             this.options.add(o);
         }
+        optionOffset.set(0);
         optionButtonsRefresh();
     }
 
@@ -290,7 +287,6 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
         setOptions(options);
         attach(input, preferTop);
         optionButtonsRefresh();
-        optionsOffsetChange.occur();
         optionButtonSet.markFirst(uprising);
         slider.y().set(uprising ? bottom().getFloat() - slider.height().getFloat() / 2 :
                 top().getFloat() + slider.height().getFloat() / 2);

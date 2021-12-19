@@ -1,17 +1,19 @@
 package airbricks.note;
 
 import airbricks.PowerBrick;
+import airbricks.text.ArticleBrick;
 import airbricks.text.TextBrick;
 import bricks.Color;
 import bricks.Sized;
-import bricks.input.mouse.MouseButton;
-import bricks.slab.RectangleSlab;
-import bricks.slab.Slab;
-import bricks.slab.WithSlab;
+import bricks.input.Story;
 import bricks.input.keyboard.Key;
 import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
-import bricks.input.Story;
+import bricks.input.mouse.MouseButton;
+import bricks.slab.GradientSlab;
+import bricks.slab.RectangleSlab;
+import bricks.slab.Slab;
+import bricks.slab.WithSlab;
 import bricks.trade.Host;
 import bricks.var.Pull;
 import bricks.var.Push;
@@ -21,7 +23,7 @@ import suite.suite.Subject;
 
 import static suite.suite.$uite.$;
 
-public class NoteBrick extends PowerBrick<Host> implements WithSlab {
+public class EssayBrick extends PowerBrick<Host> implements WithSlab {
 
     public boolean pressed;
     public Push<Long> clicks;
@@ -37,10 +39,10 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
 
     public final NumPull outlineThick;
 
-    protected TextBrick note;
+    protected ArticleBrick article;
     private final Story story;
 
-    public NoteBrick(Host host) {
+    public EssayBrick(Host host) {
         super(host);
 
         pressed = false;
@@ -62,7 +64,7 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
         }};
 
         background = new RectangleSlab(this) {{
-            color().let(() -> pressed ?
+            color().let(() -> pressed || seeKeyboard() ?
                     backgroundColorPressed.get() : seeCursor() ?
                     backgroundColorSeeCursor.get() :
                     backgroundColorDefault.get());
@@ -70,33 +72,27 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
             adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
         }};
 
-        note = new TextBrick(this){
+        article = new ArticleBrick(this){
             @Override
-            public boolean seeCursor() {
-                return NoteBrick.this.seeCursor() || super.seeCursor();
+            public CursorOver cursorOver() {
+                var co = super.cursorOver();
+                if(co == CursorOver.DIRECT) return CursorOver.DIRECT;
+                return EssayBrick.this.cursorOver();
             }
         };
-        note.left().let(this.left().plus(10));
-        note.y().let(this.y());
-
-        adjust(Sized.relative(note, 20));
-        when(this::seeKeyboard, () -> {
-            note.hasKeyboard = HasKeyboard.SHARED;
-            note.showCursor();
-            note.updateCursorPosition(true);
-        }, () -> {
-            note.hasKeyboard = HasKeyboard.NO;
-            note.hideCursor();
-            note.select(0, 0);
-        });
+        article.left().let(this.left().plus(10));
+        article.top().let(this.top().plus(10));
+        article.adjust(Sized.relative(outline, -10));
 
         story = new Story(10);
-        $bricks.set(outline, background, note);
+        $bricks.set(outline, background, article);
     }
+
 
 
     @Override
     public void update() {
+
         var in = input();
         var wall = wall();
 
@@ -137,8 +133,21 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
                 }
             }
         }
-
         super.update();
+    }
+
+    @Override
+    public void requestKeyboard() {
+        super.requestKeyboard();
+        article.hasKeyboard = HasKeyboard.SHARED;
+        article.showCursor();
+    }
+
+    @Override
+    public void depriveKeyboard() {
+        super.depriveKeyboard();
+        article.hasKeyboard = HasKeyboard.NO;
+        article.hideCursor();
     }
 
     public Subject order(Subject $) {
@@ -157,19 +166,19 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
     }
 
     public Push<String> text() {
-        return note.text();
+        return article.text();
     }
 
     public boolean isEditable() {
-        return note.isEditable();
+        return article.isEditable();
     }
 
     public void editable(boolean should) {
-        note.editable(should);
+        article.editable(should);
     }
 
-    public TextBrick getNote() {
-        return note;
+    public ArticleBrick getArticle() {
+        return article;
     }
 
     @Override

@@ -79,7 +79,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
             button.width().let(bg.width().plus(-5));
             button.x().let(bg.x());
             button.text().set(Objects.toString($.raw()));
-            if(c.firstFall()) {
+            if(c.opening()) {
                 button.top().let(bg.top().plus(3));
             } else {
                 button.top().let(prevButton.bottom());

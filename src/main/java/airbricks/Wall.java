@@ -410,7 +410,7 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
                 if(d.is(String.class)) {
                     switch (d.asString()) {
                         case "text" -> pushString(text(), d.in());
-                        case "textColor" -> pullColor(note.textSlab.color(), d.in());
+                        case "textColor" -> pullColor(note.stb.color(), d.in());
                         case "x" -> pullNumber(x(), d.in());
                         case "y" -> pullNumber(y(), d.in());
                         case "aim" -> aim(d.in().one());

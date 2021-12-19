@@ -48,7 +48,6 @@ public abstract class PowerBrick<H extends Host> extends Airbrick<H> implements 
 
     @Override
     public void update() {
-        super.update();
         for(var e : input().getEvents()) {
             if(e instanceof Mouse.ButtonEvent be) {
                 if(be.button == MouseButton.Code.LEFT) {
@@ -69,5 +68,6 @@ public abstract class PowerBrick<H extends Host> extends Airbrick<H> implements 
                 }
             }
         }
+        super.update();
     }
 }

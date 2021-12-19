@@ -16,8 +16,6 @@ import bricks.var.subject.SubjectPush;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
 
-import static suite.suite.$uite.$;
-
 
 public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
 
@@ -90,7 +88,7 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
                     case RIGHT -> {
                         if(e.isPress()) {
                             if(note.cursorPosition().get() == note.text().get().length()) {
-                                if(!note.cars.isAny()) {
+                                if(!note.getSelected().isEmpty()) {
                                     note.paste(supplement.text().get());
                                     if (assisted) {
                                         depriveAssistance();

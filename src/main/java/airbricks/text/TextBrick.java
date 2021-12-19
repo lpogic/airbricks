@@ -6,13 +6,11 @@ import airbricks.keyboard.KeyboardDealer;
 import bricks.Color;
 import bricks.Location;
 import bricks.Located;
-import bricks.Sized;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
 import bricks.font.LoadedFont;
 import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
-import bricks.slab.TextSlab;
 import bricks.slab.Shape;
 import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
@@ -27,28 +25,14 @@ import bricks.var.num.NumPull;
 import bricks.var.num.NumSource;
 import suite.suite.util.Cascade;
 
-import java.util.function.BiConsumer;
-
 public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, Location {
 
     protected boolean editable;
     public HasKeyboard hasKeyboard;
 
-    public final RectangleSlab background;
-    public final Pull<Color> backgroundColorDefault;
-    public final Pull<Color> backgroundColorSeeCursor;
-    public final Pull<Color> backgroundColorPressed;
-
-    public final RectangleSlab outline;
-    public final Pull<Color> outlineColorDefault;
-    public final Pull<Color> outlineColorSeeKeyboard;
-
-    public final NumPull outlineThick;
-
     public final Push<String> text;
-    public final TextSlab textSlab;
+    public final SelectableTextBrick stb;
     public final RectangleSlab cursor;
-    public final TextCars cars;
     public final Pull<Integer> cursorPosition;
 
     public TextBrick(Host host) {
@@ -56,84 +40,52 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
         editable = true;
         hasKeyboard = HasKeyboard.NO;
 
-        backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
-        backgroundColorSeeCursor = Var.pull(Color.hex("#212323"));
-        backgroundColorPressed = Var.pull(Color.hex("#191B1B"));
-
-        outlineColorDefault = Var.pull(Color.hex("#1e1a2c"));
-        outlineColorSeeKeyboard = Var.pull(Color.mix(1, .8, .6));
-
-        outlineThick = Var.num(4);
-
-        outline = new RectangleSlab(this) {{
-            color().let(() -> seeKeyboard() ?
-                    outlineColorSeeKeyboard.get() :
-                    outlineColorDefault.get());
-        }};
-
-        background = new RectangleSlab(this) {{
-            color().let(() -> seeCursor() ?
-                    backgroundColorSeeCursor.get() :
-                    backgroundColorDefault.get());
-            aim(outline);
-            adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
-        }};
-
         text = Var.push("");
-        textSlab = new TextSlab(this) {{
+        stb = new SelectableTextBrick(this) {{
             height().set(20);
             color().set(Color.mix(1, 1, 1));
             text().let(text);
         }};
 
         cursorPosition = Var.pull(0);
-        cars = new TextCars(this);
 
         text.act(() -> {
             int len = text.get().length();
             if(len < cursorPosition.get()) {
                 cursorPosition.set(len);
             }
-            TextCars.MinMax mm = cars.getMinMax();
-            if(len > mm.min()) {
-                cars.headIndex.set(len);
-                cars.tailIndex.set(len);
-            } else if(len > mm.max()) {
-                cars.tailIndex.set(mm.min());
-                cars.headIndex.set(len);
-            }
         });
 
         cursor = new RectangleSlab(this) {{
             width().set(1);
-            height().let(textSlab.height());
-            color().let(textSlab.color());
+            height().let(stb.height());
+            color().let(stb.color());
             x().let(() -> {
                 int pos = cursorPosition.get();
-                LoadedFont font = order(FontManager.class).getFont(textSlab.font().get());
-                float xOffset = font.getStringWidth(text.get().substring(0, pos), textSlab.height().getFloat());
-                float l = textSlab.left().getFloat();
+                LoadedFont font = order(FontManager.class).getFont(stb.textSlab.font().get());
+                float xOffset = font.getStringWidth(text.get().substring(0, pos), stb.height().getFloat(), stb.textSlab.isHideEol());
+                float l = stb.left().getFloat();
                 return l + xOffset;
-            }, cursorPosition, textSlab.font(), text, textSlab.height(), textSlab.x());
+            }, cursorPosition, stb.textSlab.font(), text, stb.height(), stb.x());
             y().let(() -> {
-                BackedFont font = order(FontManager.class).getFont(textSlab.font().get(), textSlab.height().getFloat());
-                float y = textSlab.y().getFloat();
+                BackedFont font = order(FontManager.class).getFont(stb.textSlab.font().get(), stb.height().getFloat());
+                float y = stb.y().getFloat();
                 return y + font.getScaledDescent() / 2;
             });
         }};
 
-        $bricks.set(textSlab);
+        $bricks.set(stb);
     }
 
     public void updateCursorPosition(boolean resetCars) {
-        float x = textSlab.left().getFloat();
-        int newCursorPos = order(FontManager.class).getFont(textSlab.font().get())
-                .getCursorPosition(text.get(), textSlab.height().getFloat(),
-                        x, (float) input().state.mouseCursorX());
+        float x = stb.left().getFloat();
+        int newCursorPos = order(FontManager.class).getFont(stb.textSlab.font().get())
+                .getCursorPosition(text.get(), stb.height().getFloat(),
+                        x, (float) input().state.mouseCursorX(), stb.textSlab.isHideEol());
         cursorPosition.set(newCursorPos);
-        cars.headIndex.set(newCursorPos);
+        stb.setSelectionHead(newCursorPos);
         if(resetCars) {
-            cars.tailIndex.set(newCursorPos);
+            stb.setSelectionTail(newCursorPos);
         }
     }
 
@@ -155,7 +107,9 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
         }
         if(seeKeyboard()) {
             if(in.state.isPressed(MouseButton.Code.LEFT)) {
-                updateCursorPosition(mouseLeftButtonPress);
+                if(seeCursor()) {
+                    updateCursorPosition(mouseLeftButtonPress);
+                }
             }
 
             if(editable) {
@@ -180,31 +134,30 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                     if (e.key.isNumPad() && !e.isNumLocked()) {
                         switch (e.key) {
                             case NUM_7_HOME -> {
-                                if(cars.isAny()) {
+                                if(stb.anySelected()) {
                                     if(e.isShifted()) {
-                                        cars.headIndex.set(0);
+                                        stb.setSelectionHead(0);
                                     } else {
-                                        cars.reset();
+                                        stb.resetSelection();
                                     }
                                 } else {
                                     if(e.isShifted()) {
-                                        cars.tailIndex.set(cursorPos);
-                                        cars.headIndex.set(0);
+                                        stb.setSelection(0, cursorPos);
                                     }
                                 }
                                 cursorPosition.set(0);
                             }
                             case NUM_1_END -> {
-                                if(cars.isAny()) {
+                                if(stb.anySelected()) {
                                     if(e.isShifted()) {
-                                        cars.headIndex.set(text.get().length());
+                                        stb.setSelectionHead(text.get().length());
                                     } else {
-                                        cars.reset();
+                                        stb.resetSelection();
                                     }
                                 } else {
                                     if(e.isShifted()) {
-                                        cars.tailIndex.set(cursorPos);
-                                        cars.headIndex.set(text.get().length());
+                                        stb.setSelectionTail(cursorPos);
+                                        stb.setSelectionHead(text.get().length());
                                     }
                                 }
                                 cursorPosition.set(text.get().length());
@@ -212,16 +165,17 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                             case NUM_0_INSERT -> {
                                 if(!editable) break;
                                 String clip = clipboard().get();
-                                TextCars.MinMax minMax;
-                                if(cars.isAny()) {
-                                    minMax = cars.getMinMax();
+                                int min, max;
+                                if(stb.anySelected()) {
+                                    min = stb.getSelectionMin();
+                                    max = stb.getSelectionMax();
                                 } else {
-                                    minMax = new TextCars.MinMax(cursorPos, cursorPos);
+                                    min = max = cursorPos;
                                 }
                                 String str = text.get();
-                                text.set(str.substring(0, minMax.min()) +
+                                text.set(str.substring(0, min) +
                                         clip +
-                                        str.substring(minMax.max()));
+                                        str.substring(max));
                                 cursorPosition.set(cursorPos + clip.length());
                             }
                             case NUM_DECIMAL_DELETE -> {
@@ -249,7 +203,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                                     cursorPosition.set(cursorPos - 1);
                                 }
                             }
-                            cars.reset();
+                            stb.resetSelection();
                         }
                         case DELETE -> {
                             if(!editable) break;
@@ -263,48 +217,48 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                             }
                         }
                         case LEFT -> {
-                            int head = cars.getHead();
-                            int tail = cars.getTail();
+                            int head = stb.selectionHead.get();
+                            int tail = stb.selectionTail.get();
                             if(e.isShifted()) {
                                 if(e.isControlled()) {
                                     if(e.isAltered()) {
                                         if(tail < head) {
-                                            cars.tailIndex.set(head);
-                                            cars.headIndex.set(tail);
+                                            stb.setSelectionTail(head);
+                                            stb.setSelectionHead(tail);
                                             cursorPosition.set(tail);
                                         }
                                     } else {
                                         if (cursorPos > 0) {
                                             int jump = ctrlJump(cursorPos, true);
-                                            if(!cars.isAny()) {
-                                                cars.tailIndex.set(cursorPos);
+                                            if(!stb.anySelected()) {
+                                                stb.setSelectionTail(cursorPos);
                                             }
-                                            cars.headIndex.set(cursorPos - jump);
+                                            stb.setSelectionHead(cursorPos - jump);
                                             cursorPosition.set(cursorPos - jump);
                                         }
                                     }
                                 } else {
-                                    if (!cars.isAny()) {
-                                        cars.tailIndex.set(cursorPos);
+                                    if (!stb.anySelected()) {
+                                        stb.setSelectionTail(cursorPos);
                                     }
                                     if (cursorPos > 0) {
-                                        cars.headIndex.set(cursorPos - 1);
+                                        stb.setSelectionHead(cursorPos - 1);
                                         cursorPosition.set(cursorPos - 1);
                                     }
                                 }
                             } else {
                                 if(e.isControlled()) {
                                     if (cursorPos > 0) {
-                                        if (cars.isAny()) {
-                                            cars.reset();
+                                        if (stb.anySelected()) {
+                                            stb.resetSelection();
                                         }
                                         int jump = ctrlJump(cursorPos, true);
                                         cursorPosition.set(cursorPos - jump);
                                     }
                                 } else {
-                                    if (cars.isAny()) {
-                                        cursorPosition.set(cars.getMinIndex());
-                                        cars.reset();
+                                    if (stb.anySelected()) {
+                                        cursorPosition.set(stb.getSelectionMin());
+                                        stb.resetSelection();
                                     } else {
                                         if (cursorPos > 0) {
                                             cursorPosition.set(cursorPos - 1);
@@ -314,48 +268,48 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                             }
                         }
                         case RIGHT -> {
-                            int head = cars.getHead();
-                            int tail = cars.getTail();
+                            int head = stb.selectionHead.get();
+                            int tail = stb.selectionTail.get();
                             if(e.isShifted()) {
                                 if(e.isControlled()) {
                                     if(e.isAltered()) {
                                         if(tail > head) {
-                                            cars.tailIndex.set(head);
+                                            stb.setSelectionTail(head);
                                             cursorPosition.set(tail);
-                                            cars.headIndex.set(tail);
+                                            stb.setSelectionHead(tail);
                                         }
                                     } else {
                                         if (cursorPos < text.get().length()) {
                                             int jump = ctrlJump(cursorPos, false);
-                                            if(!cars.isAny()) {
-                                                cars.tailIndex.set(cursorPos);
+                                            if(!stb.anySelected()) {
+                                                stb.setSelectionTail(cursorPos);
                                             }
-                                            cars.headIndex.set(cursorPos + jump);
+                                            stb.setSelectionHead(cursorPos + jump);
                                             cursorPosition.set(cursorPos + jump);
                                         }
                                     }
                                 } else {
-                                    if (!cars.isAny()) {
-                                        cars.tailIndex.set(cursorPos);
+                                    if (!stb.anySelected()) {
+                                        stb.setSelectionTail(cursorPos);
                                     }
                                     if (cursorPos < text.get().length()) {
                                         cursorPosition.set(cursorPos + 1);
-                                        cars.headIndex.set(cursorPos + 1);
+                                        stb.setSelectionHead(cursorPos + 1);
                                     }
                                 }
                             } else {
                                 if(e.isControlled()) {
                                     if (cursorPos < text.get().length()) {
-                                        if (cars.isAny()) {
-                                            cars.reset();
+                                        if (stb.anySelected()) {
+                                            stb.resetSelection();
                                         }
                                         int jump = ctrlJump(cursorPos, false);
                                         cursorPosition.set(cursorPos + jump);
                                     }
                                 } else {
-                                    if (cars.isAny()) {
-                                        cursorPosition.set(cars.getMaxIndex());
-                                        cars.reset();
+                                    if (stb.anySelected()) {
+                                        cursorPosition.set(stb.getSelectionMax());
+                                        stb.resetSelection();
                                     } else {
                                         if (cursorPos < text.get().length()) {
                                             cursorPosition.set(cursorPos + 1);
@@ -365,31 +319,31 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                             }
                         }
                         case HOME -> {
-                            if(cars.isAny()) {
+                            if(stb.anySelected()) {
                                 if(e.isShifted()) {
-                                    cars.headIndex.set(0);
+                                    stb.setSelectionHead(0);
                                 } else {
-                                    cars.reset();
+                                    stb.resetSelection();
                                 }
                             } else {
                                 if(e.isShifted()) {
-                                    cars.tailIndex.set(cursorPos);
-                                    cars.headIndex.set(0);
+                                    stb.setSelectionTail(cursorPos);
+                                    stb.setSelectionHead(0);
                                 }
                             }
                             cursorPosition.set(0);
                         }
                         case END -> {
-                            if(cars.isAny()) {
+                            if(stb.anySelected()) {
                                 if(e.isShifted()) {
-                                    cars.headIndex.set(text.get().length());
+                                    stb.setSelectionHead(text.get().length());
                                 } else {
-                                    cars.reset();
+                                    stb.resetSelection();
                                 }
                             } else {
                                 if(e.isShifted()) {
-                                    cars.tailIndex.set(cursorPos);
-                                    cars.headIndex.set(text.get().length());
+                                    stb.setSelectionTail(cursorPos);
+                                    stb.setSelectionHead(text.get().length());
                                 }
                             }
                             cursorPosition.set(text.get().length());
@@ -399,7 +353,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                             String clip = clipboard().get();
                             if(!clip.isEmpty()) {
                                 paste(clip);
-                                cars.reset();
+                                stb.resetSelection();
                             }
                         }
                         case X -> {
@@ -423,7 +377,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                                 String clip = clipboard().get();
                                 if(!clip.isEmpty()) {
                                     paste(clip);
-                                    cars.reset();
+                                    stb.resetSelection();
                                 }
                             }
                         }
@@ -434,7 +388,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                                 String clip = clipboard().get();
                                 if(!clip.isEmpty()) {
                                     paste(clip);
-                                    cars.reset();
+                                    stb.resetSelection();
                                 }
                                 if(!cut.isEmpty()) clipboard().set(cut);
                             }
@@ -454,13 +408,13 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                         case A -> {
                             if(e.isControlled() && !e.isAltered()) {
                                 cursorPosition.set(text.get().length());
-                                cars.headIndex.set(text.get().length());
-                                cars.tailIndex.set(0);
+                                stb.setSelectionHead(text.get().length());
+                                stb.setSelectionTail(0);
                             }
                         }
                         case ESCAPE -> {
-                            if(cars.isAny()) {
-                                cars.reset();
+                            if(stb.anySelected()) {
+                                stb.resetSelection();
                             }
                         }
                     }
@@ -472,33 +426,26 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
     }
 
     public void selectAll() {
-        cars.tailIndex.set(0);
-        cars.headIndex.set(text.get().length());
+        stb.setSelectionTail(0);
+        stb.setSelectionHead(text.get().length());
     }
 
 
     public void select(int begin, int length) {
         if(begin >= 0 && length >= 0 && begin + length <= text.get().length()) {
-            cars.tailIndex.set(begin);
-            cars.headIndex.set(begin + length);
+            stb.setSelectionTail(begin);
+            stb.setSelectionHead(begin + length);
         }
     }
 
     public String getSelected() {
-        if (cars.isAny()) {
-            var minMax = cars.getMinMax();
-            String str = text.get();
-            return str.substring(minMax.min(), minMax.max());
-        }
-        return "";
+        return stb.selectedText().get();
     }
 
     public String cutSelected() {
-        if(cars.isAny()) {
-            var minMax = cars.getMinMax();
-            String str = text.get();
-            String cut = str.substring(minMax.min(), minMax.max());
-            int cursorBegin = minMax.min();
+        if(stb.anySelected()) {
+            String cut = stb.selectedText().get();
+            int cursorBegin = stb.getSelectionMin();
 
             UserAction ua = new UserAction() {
 
@@ -508,7 +455,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                     text.set(str.substring(0, cursorBegin) +
                             str.substring(cursorBegin + cut.length()));
                     cursorPosition.set(cursorBegin);
-                    cars.reset();
+                    stb.resetSelection();
                 }
 
                 @Override
@@ -517,8 +464,8 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
                     text.set(str.substring(0, cursorBegin) + cut +
                             str.substring(cursorBegin));
                     cursorPosition.set(cursorBegin);
-                    cars.headIndex.set(cursorBegin);
-                    cars.tailIndex.set(cursorBegin + cut.length());
+                    stb.setSelectionHead(cursorBegin);
+                    stb.setSelectionTail(cursorBegin + cut.length());
                 }
             };
             pushOpenUserAction();
@@ -530,35 +477,36 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
     }
 
     public void paste(String pasted) {
-        TextCars.MinMax minMax;
-        if(cars.isAny()) {
-            minMax = cars.getMinMax();
+        int min, max;
+        if(!stb.anySelected()) {
+            min = stb.getSelectionMin();
+            max = stb.getSelectionMax();
         } else {
             int cursorPos = cursorPosition.get();
-            minMax = new TextCars.MinMax(cursorPos, cursorPos);
+            min = max = cursorPos;
         }
         String str = text.get();
-        String replaced = str.substring(minMax.min(), minMax.max());
+        String replaced = str.substring(min, max);
 
         UserAction ua = new UserAction() {
 
             @Override
             public void front() {
                 String str = text.get();
-                text.set(str.substring(0, minMax.min()) + pasted +
-                        str.substring(minMax.max()));
-                cursorPosition.set(minMax.min() + pasted.length());
-                cars.headIndex.set(minMax.min() + pasted.length());
-                cars.tailIndex.set(minMax.min());
+                text.set(str.substring(0, min) + pasted +
+                        str.substring(max));
+                cursorPosition.set(min + pasted.length());
+                stb.setSelectionHead(min + pasted.length());
+                stb.setSelectionTail(min);
             }
 
             @Override
             public void back() {
                 String str = text.get();
-                text.set(str.substring(0, minMax.min()) + replaced +
-                        str.substring(minMax.min() + pasted.length()));
-                cursorPosition.set(minMax.min() + replaced.length());
-                cars.reset();
+                text.set(str.substring(0, min) + replaced +
+                        str.substring(min + pasted.length()));
+                cursorPosition.set(min + replaced.length());
+                stb.resetSelection();
             }
         };
         pushOpenUserAction();
@@ -584,7 +532,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
             String str = text.get();
             text.set(str.substring(0, cursorBegin) + inset + str.substring(cursorBegin));
             cursorPosition.set(cursorBegin + inset.length());
-            cars.reset();
+            stb.resetSelection();
         }
 
         @Override
@@ -592,7 +540,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
             String str = text.get();
             text.set(str.substring(0, cursorBegin) + str.substring(cursorBegin + inset.length()));
             cursorPosition.set(cursorBegin);
-            cars.reset();
+            stb.resetSelection();
         }
     }
     private CharInsetUserAction charInset = new CharInsetUserAction();
@@ -631,7 +579,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
             String str = text.get();
             text.set(str.substring(0, cursorBegin) + str.substring(cursorBegin + outset.length()));
             cursorPosition.set(cursorBegin);
-            cars.reset();
+            stb.resetSelection();
         }
 
         @Override
@@ -639,7 +587,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
             String str = text.get();
             text.set(str.substring(0, cursorBegin) + outset + str.substring(cursorBegin));
             cursorPosition.set(cursorBegin + outset.length());
-            cars.reset();
+            stb.resetSelection();
 
         }
     }
@@ -722,6 +670,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
             public void set(String s) {
                 selectAll();
                 paste(s);
+                stb.resetSelection();
                 super.set(s);
             }
         };
@@ -736,38 +685,38 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
     }
 
     public NumPull height() {
-        return textSlab.height();
+        return stb.height();
     }
     public NumSource width() {
-        return textSlab.width();
+        return stb.width();
     }
 
     public NumPull left() {
-        return textSlab.left();
+        return stb.left();
     }
 
     public NumPull right() {
-        return textSlab.right();
+        return stb.right();
     }
 
     public NumPull top() {
-        return textSlab.top();
+        return stb.top();
     }
 
     public NumPull bottom() {
-        return textSlab.bottom();
+        return stb.bottom();
     }
 
     public NumPull x() {
-        return textSlab.x();
+        return stb.x();
     }
 
     public NumPull y() {
-        return textSlab.y();
+        return stb.y();
     }
 
     public void aim(Located located) {
-        textSlab.aim(located);
+        stb.aim(located);
     }
 
     @Override
@@ -787,11 +736,10 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
     }
 
     public void showCursor() {
-        $bricks.aimedSet(textSlab, cars);
         $bricks.set(cursor);
     }
 
     public void hideCursor() {
-        $bricks.unset(cars, cursor);
+        $bricks.unset(cursor);
     }
 }

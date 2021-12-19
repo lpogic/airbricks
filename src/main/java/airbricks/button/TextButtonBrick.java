@@ -90,9 +90,13 @@ public class TextButtonBrick extends PowerBrick<Host> implements WithSlab {
                             wall.trapMouse(this);
                         }
                     } else {
-                        if(pressed && seeCursor() && (!seeKeyboard() || !in.state.isPressed(Key.Code.SPACE))) {
-                            pressed = false;
-                            click();
+                        if(pressed) {
+                            if(!(seeKeyboard() && in.state.isPressed(Key.Code.SPACE))) {
+                                pressed = false;
+                                if(seeCursor()) {
+                                    click();
+                                }
+                            }
                         }
                         if(wall.mouseTrappedBy(this)) {
                             wall.freeMouse();
