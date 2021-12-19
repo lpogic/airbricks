@@ -99,7 +99,9 @@ public class SelectableTextBrick extends Brick<Host> implements WithShape, Locat
     }
 
     public boolean anySelected() {
-        return selectionHead != selectionTail;
+        int head = selectionHead.get();
+        int tail = selectionTail.get();
+        return head != tail;
     }
 
     public Bounds getSelectionBounds() {

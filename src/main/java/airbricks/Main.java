@@ -2,6 +2,8 @@ package airbricks;
 
 import airbricks.note.EssayBrick;
 import airbricks.note.NoteBrick;
+import bricks.Color;
+import bricks.Sized;
 
 import static suite.suite.$uite.$;
 
@@ -10,7 +12,10 @@ public class Main extends Wall {
     @Override
     protected void setup() {
         var essay = new EssayBrick(this);
-        essay.fill(this);
+        essay.width().let(width().scale(.5));
+        essay.height().let(height().scale(.5));
+        essay.aim(this);
+        essay.getArticle().textColor().set(Color.BLACK);
         essay.text().set("""
                 List<String> lines;
                 int lineOffset;

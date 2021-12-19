@@ -69,6 +69,7 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
                     var line = new SelectableTextBrick(this);
                     line.height().let(fontHeight);
                     line.left().let(left);
+                    line.color().let(textColor);
                     int finalI = i;
                     if (pl != null) {
                         line.top().let(pl.bottom());
@@ -93,7 +94,6 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
                         if (ind < lines.size()) return lines.get(ind);
                         else return "";
                     });
-                    line.color().set(Color.mix(1, 1, 1));
                     super.bricks().set(line);
                     pl = line;
                 }
@@ -247,12 +247,16 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
     NumPull width;
     NumPull left;
 
+    final Pull<Color> textColor;
+
     Impulse sliderYChange;
 
     public ArticleBrick(Host host) {
         super(host);
         editable = true;
         hasKeyboard = HasKeyboard.NO;
+
+        textColor = Var.pull(Color.mix(0,1,1));
 
         lines = new Lines(this);
 
@@ -296,9 +300,9 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
                 float y = stb.y().getFloat();
                 return y + font.getScaledDescent() / 2;
             });
-            bricks().set(cursor);
+            showCursor();
         } else {
-            bricks().unset(cursor);
+            hideCursor();
         }
     }
 
@@ -1054,6 +1058,7 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
                 paste(s);
                 updateCursor(0, true);
                 lines.resetSelection();
+                hideCursor();
                 super.set(s);
             }
         };
@@ -1191,5 +1196,9 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         } else {
             drop(slider);
         }
+    }
+
+    public Pull<Color> textColor() {
+        return textColor;
     }
 }

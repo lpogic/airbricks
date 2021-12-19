@@ -62,7 +62,7 @@ public class NoteBrick extends PowerBrick<Host> implements WithSlab {
         }};
 
         background = new RectangleSlab(this) {{
-            color().let(() -> pressed ?
+            color().let(() -> pressed || seeKeyboard() ?
                     backgroundColorPressed.get() : seeCursor() ?
                     backgroundColorSeeCursor.get() :
                     backgroundColorDefault.get());

@@ -37,6 +37,8 @@ public class EssayBrick extends PowerBrick<Host> implements WithSlab {
     public final Pull<Color> outlineColorDefault;
     public final Pull<Color> outlineColorSeeKeyboard;
 
+    public final RectangleSlab cursorLine;
+
     public final NumPull outlineThick;
 
     protected ArticleBrick article;
@@ -72,6 +74,11 @@ public class EssayBrick extends PowerBrick<Host> implements WithSlab {
             adjust(Sized.relative(outline, outlineThick.perFloat(t -> -t)));
         }};
 
+        cursorLine = new RectangleSlab(this);
+        cursorLine.color().set(Color.hex("#212121"));
+        cursorLine.x().let(x());
+        cursorLine.width().let(background.width());
+
         article = new ArticleBrick(this){
             @Override
             public CursorOver cursorOver() {
@@ -79,10 +86,25 @@ public class EssayBrick extends PowerBrick<Host> implements WithSlab {
                 if(co == CursorOver.DIRECT) return CursorOver.DIRECT;
                 return EssayBrick.this.cursorOver();
             }
+
+            @Override
+            public void showCursor() {
+                super.showCursor();
+                EssayBrick.this.bricks().aimedSet(article, cursorLine);
+            }
+
+            @Override
+            public void hideCursor() {
+                super.hideCursor();
+                EssayBrick.this.drop(cursorLine);
+            }
         };
         article.left().let(this.left().plus(10));
         article.top().let(this.top().plus(10));
         article.adjust(Sized.relative(outline, -10));
+
+        cursorLine.height().let(article.cursor.height());
+        cursorLine.y().let(article.cursor.y());
 
         story = new Story(10);
         $bricks.set(outline, background, article);

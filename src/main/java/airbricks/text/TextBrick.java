@@ -44,8 +44,8 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
         stb = new SelectableTextBrick(this) {{
             height().set(20);
             color().set(Color.mix(1, 1, 1));
-            text().let(text);
         }};
+        stb.text().let(text);
 
         cursorPosition = Var.pull(0);
 
@@ -478,7 +478,7 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
 
     public void paste(String pasted) {
         int min, max;
-        if(!stb.anySelected()) {
+        if(stb.anySelected()) {
             min = stb.getSelectionMin();
             max = stb.getSelectionMax();
         } else {

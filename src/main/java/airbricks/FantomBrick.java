@@ -2,6 +2,7 @@ package airbricks;
 
 import airbricks.button.TextButtonBrick;
 import airbricks.note.AssistedNoteBrick;
+import airbricks.note.EssayBrick;
 import airbricks.note.NoteBrick;
 import airbricks.keyboard.KeyboardClient;
 import bricks.Color;
@@ -135,6 +136,8 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
                         case "x" -> pullNumber(x(), d.in());
                         case "y" -> pullNumber(y(), d.in());
                         case "aim" -> aim(d.in().one());
+                        case "adjust" -> adjust(d.in().one());
+                        case "fill" -> fill(d.in().one());
                         case "w", "width" -> pullNumber(width(), d.in());
                         case "h", "height" -> pullNumber(height(), d.in());
                         case "color" -> pullColor(color(), d.in());
@@ -325,6 +328,44 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
                         case "outlineColor" -> pullColor(outlineColorDefault, d.in());
                         case "outlineColorSeeKeyboard" -> pullColor(outlineColorSeeKeyboard, d.in());
                         case "outlineThick" -> pullNumber(outlineThick, d.in());
+                    }
+                }
+            }
+        }
+    }
+
+    public class Essay extends EssayBrick {
+
+        public Essay() {
+            this($());
+        }
+
+        public Essay(Subject data) {
+            super(FantomBrick.this);
+            setup($().alter(FantomBrick.this.getDefaults(this)).alter(data));
+        }
+
+        public void setup(Subject data) {
+            for(var d : data) {
+                if(d.is(String.class)) {
+                    switch (d.asString()) {
+                        case "text" -> pushString(text(), d.in());
+                        case "textColor" -> pullColor(article.textColor(), d.in());
+                        case "textHeight" -> pullNumber(article.textHeight(), d.in());
+                        case "x" -> pullNumber(x(), d.in());
+                        case "y" -> pullNumber(y(), d.in());
+                        case "aim" -> aim(d.in().one());
+                        case "adjust" -> adjust(d.in().one());
+                        case "fill" -> fill(d.in().one());
+                        case "w", "width" -> pullNumber(width(), d.in());
+                        case "h", "height" -> pullNumber(height(), d.in());
+                        case "background" -> pullColor(backgroundColorDefault, d.in());
+                        case "backgroundSeeCursor" -> pullColor(backgroundColorSeeCursor, d.in());
+                        case "backgroundPressed" -> pullColor(backgroundColorPressed, d.in());
+                        case "outlineColor" -> pullColor(outlineColorDefault, d.in());
+                        case "outlineColorSeeKeyboard" -> pullColor(outlineColorSeeKeyboard, d.in());
+                        case "outlineThick" -> pullNumber(outlineThick, d.in());
+                        case "cursorLineColor" -> pullColor(cursorLine.color(), d.in());
                     }
                 }
             }
