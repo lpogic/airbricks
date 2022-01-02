@@ -13,7 +13,7 @@ import bricks.slab.RectangleSlab;
 import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
-import bricks.var.Pull;
+import bricks.trait.Pull;
 import airbricks.FantomBrick;
 import suite.suite.Subject;
 import suite.suite.action.Action;
@@ -132,6 +132,7 @@ public class ToolBrick extends Airbrick<Host> implements WithSlab {
                 }
             }
             optionIndicated = true;
+            return;
         }
         optionIndicated = false;
     }

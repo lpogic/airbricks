@@ -1,10 +1,10 @@
 package airbricks.table;
 
 import bricks.Location;
-import bricks.var.Source;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
-import bricks.var.num.NumSource;
+import bricks.trait.Source;
+import bricks.trait.Traits;
+import bricks.trait.number.NumberTrait;
+import bricks.trait.number.NumberSource;
 import suite.suite.Subject;
 import suite.suite.Suite;
 import suite.suite.util.Sequence;
@@ -43,56 +43,56 @@ public class Table implements Tabular, Location {
         }
 
         @Override
-        public NumSource x() {
+        public NumberSource x() {
             return () -> (right().getFloat() + left().getFloat()) / 2;
         }
 
         @Override
-        public NumSource y() {
+        public NumberSource y() {
             return () -> (bottom().getFloat() + top().getFloat()) / 2;
         }
 
         @Override
-        public NumSource width() {
+        public NumberSource width() {
             return () -> right().getFloat() - left().getFloat();
         }
 
         @Override
-        public NumSource height() {
+        public NumberSource height() {
             return () -> bottom().getFloat() - top().getFloat();
         }
 
         @Override
-        public NumSource left() {
+        public NumberSource left() {
             return columns.get(l).left();
         }
 
         @Override
-        public NumSource right() {
+        public NumberSource right() {
             return columns.get(r).right();
         }
 
         @Override
-        public NumSource top() {
+        public NumberSource top() {
             return rows.get(t).top();
         }
 
         @Override
-        public NumSource bottom() {
+        public NumberSource bottom() {
             return rows.get(b).bottom();
         }
     }
 
-    final NumPull left;
-    final NumPull top;
-    final NumPull width;
-    final NumPull height;
+    final NumberTrait left;
+    final NumberTrait top;
+    final NumberTrait width;
+    final NumberTrait height;
     List<Column> columns = new ArrayList<>();
     List<Row> rows = new ArrayList<>();
 
     public Table() {
 
-        width = Var.num(() -> {
+        width = Traits.num(() -> {
             float acc = 0f;
             for (var c : columns) {
                 acc += c.width.get().floatValue();
@@ -100,7 +100,7 @@ public class Table implements Tabular, Location {
             return acc;
         });
 
-        height = Var.num(() -> {
+        height = Traits.num(() -> {
             float acc = 0f;
             for (var r : rows) {
                 acc += r.height.get().floatValue();
@@ -108,8 +108,8 @@ public class Table implements Tabular, Location {
             return acc;
         });
 
-        left = Var.num(0);
-        top = Var.num(0);
+        left = Traits.num(0);
+        top = Traits.num(0);
     }
 
     @Override
@@ -132,42 +132,42 @@ public class Table implements Tabular, Location {
             }
 
             @Override
-            public NumSource x() {
+            public NumberSource x() {
                 return c.x();
             }
 
             @Override
-            public NumSource y() {
+            public NumberSource y() {
                 return r.y();
             }
 
             @Override
-            public NumSource width() {
+            public NumberSource width() {
                 return c.width();
             }
 
             @Override
-            public NumSource height() {
+            public NumberSource height() {
                 return r.height();
             }
 
             @Override
-            public NumSource left() {
+            public NumberSource left() {
                 return c.left();
             }
 
             @Override
-            public NumSource right() {
+            public NumberSource right() {
                 return c.right();
             }
 
             @Override
-            public NumSource top() {
+            public NumberSource top() {
                 return r.top();
             }
 
             @Override
-            public NumSource bottom() {
+            public NumberSource bottom() {
                 return r.bottom();
             }
         };
@@ -185,7 +185,7 @@ public class Table implements Tabular, Location {
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));
             } else if($.is(Number.class)) {
-                $.reset(new Column(Var.pull($.asExpected())));
+                $.reset(new Column(Traits.set($.asExpected())));
             }
 
             if($.is(Column.class)) {
@@ -227,7 +227,7 @@ public class Table implements Tabular, Location {
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));
             } else if($.is(Number.class)) {
-                $.reset(new Column(Var.pull($.asExpected())));
+                $.reset(new Column(Traits.set($.asExpected())));
             }
 
             if($.is(Column.class)) {
@@ -273,7 +273,7 @@ public class Table implements Tabular, Location {
             if($.is(Source.class)) {
                 $.reset(new Row($.asExpected()));
             } else if($.is(Number.class)) {
-                $.reset(new Row(Var.pull($.asExpected())));
+                $.reset(new Row(Traits.set($.asExpected())));
             }
 
             if($.is(Row.class)) {
@@ -295,8 +295,8 @@ public class Table implements Tabular, Location {
     }
 
     @Override
-    public NumPull x() {
-        return new NumPull() {
+    public NumberTrait x() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 left.let(() -> s.get().floatValue() - width.getFloat() / 2);
@@ -309,8 +309,8 @@ public class Table implements Tabular, Location {
         };
     }
 
-    public NumPull y() {
-        return new NumPull() {
+    public NumberTrait y() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 top.let(() -> s.get().floatValue() - height.getFloat() / 2);
@@ -323,20 +323,20 @@ public class Table implements Tabular, Location {
         };
     }
 
-    public NumSource width() {
+    public NumberSource width() {
         return width;
     }
 
-    public NumSource height() {
+    public NumberSource height() {
         return height;
     }
 
-    public NumPull left() {
+    public NumberTrait left() {
         return left;
     }
 
-    public NumPull right() {
-        return new NumPull() {
+    public NumberTrait right() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 left.let(() -> s.get().floatValue() - width.getFloat());
@@ -349,12 +349,12 @@ public class Table implements Tabular, Location {
         };
     }
 
-    public NumPull top() {
+    public NumberTrait top() {
         return top;
     }
 
-    public NumPull bottom() {
-        return new NumPull() {
+    public NumberTrait bottom() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 top.let(() -> s.get().floatValue() - height.getFloat());

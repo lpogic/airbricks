@@ -10,10 +10,11 @@ import bricks.slab.Shape;
 import bricks.slab.TextSlab;
 import bricks.slab.WithShape;
 import bricks.trade.Host;
-import bricks.var.Pull;
-import bricks.var.Source;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
+import bricks.trait.Pull;
+import bricks.trait.Source;
+import bricks.trait.Trait;
+import bricks.trait.Traits;
+import bricks.trait.number.NumberTrait;
 import bricks.wall.Brick;
 
 public class SelectableTextBrick extends Brick<Host> implements WithShape, Location {
@@ -35,16 +36,16 @@ public class SelectableTextBrick extends Brick<Host> implements WithShape, Locat
 
     TextSlab textSlab;
     RectangleSlab selection;
-    Pull<Integer> selectionHead;
-    Pull<Integer> selectionTail;
+    Trait<Integer> selectionHead;
+    Trait<Integer> selectionTail;
 
     public SelectableTextBrick(Host host) {
         super(host);
 
         textSlab = new TextSlab(host);
         selection = new RectangleSlab(host);
-        selectionHead = Var.pull(0);
-        selectionTail = Var.pull(0);
+        selectionHead = Traits.set(0);
+        selectionTail = Traits.set(0);
 
         selection.color().set(Color.hex("#2e5fa6"));
 
@@ -127,39 +128,39 @@ public class SelectableTextBrick extends Brick<Host> implements WithShape, Locat
         return textSlab;
     }
 
-    public NumPull height() {
+    public NumberTrait height() {
         return textSlab.height();
     }
 
-    public NumPull left() {
+    public NumberTrait left() {
         return textSlab.left();
     }
 
-    public NumPull right() {
+    public NumberTrait right() {
         return textSlab.right();
     }
 
-    public NumPull top() {
+    public NumberTrait top() {
         return textSlab.top();
     }
 
-    public NumPull bottom() {
+    public NumberTrait bottom() {
         return textSlab.bottom();
     }
 
-    public NumPull x() {
+    public NumberTrait x() {
         return textSlab.x();
     }
 
-    public NumPull y() {
+    public NumberTrait y() {
         return textSlab.y();
     }
 
-    public Pull<Color> color() {
+    public Trait<Color> color() {
         return textSlab.color();
     }
 
-    public Pull<String> text() {
+    public Trait<String> text() {
         return textSlab.text();
     }
 

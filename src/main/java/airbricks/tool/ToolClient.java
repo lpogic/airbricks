@@ -1,6 +1,6 @@
 package airbricks.tool;
 
-import bricks.var.Source;
+import bricks.trait.Source;
 
 public interface ToolClient {
     Source<Boolean> hasToolBrick();

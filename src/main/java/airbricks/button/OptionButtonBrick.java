@@ -13,9 +13,7 @@ import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
 import bricks.trade.Contract;
 import bricks.trade.Host;
-import bricks.var.Pull;
-import bricks.var.Push;
-import bricks.var.Var;
+import bricks.trait.*;
 
 public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
 
@@ -23,12 +21,12 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
 
     public boolean pressed;
     public boolean mark;
-    public Push<Long> clicks;
+    public StoredPushVar<Long> clicks;
 
     public final RectangleSlab background;
-    protected final Pull<Color> backgroundColorDefault;
-    protected final Pull<Color> backgroundColorIndicated;
-    protected final Pull<Color> backgroundColorPressed;
+    protected final Trait<Color> backgroundColorDefault;
+    protected final Trait<Color> backgroundColorIndicated;
+    protected final Trait<Color> backgroundColorPressed;
 
     public final TextSlab textSlab;
 
@@ -37,11 +35,11 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
 
         pressed = false;
         mark = false;
-        clicks = Var.push(0L);
+        clicks = PushVar.store(0L);
 
-        backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
-        backgroundColorIndicated = Var.pull(Color.hex("#212323"));
-        backgroundColorPressed = Var.pull(Color.hex("#191B1B"));
+        backgroundColorDefault = Traits.set(Color.hex("#292B2B"));
+        backgroundColorIndicated = Traits.set(Color.hex("#212323"));
+        backgroundColorPressed = Traits.set(Color.hex("#191B1B"));
 
         background = new RectangleSlab(this) {{
             color().let(() -> pressed ?
@@ -102,7 +100,7 @@ public class OptionButtonBrick extends Airbrick<Host> implements WithSlab {
         super.update();
     }
 
-    public Pull<String> text() {
+    public Trait<String> text() {
         return textSlab.text();
     }
 

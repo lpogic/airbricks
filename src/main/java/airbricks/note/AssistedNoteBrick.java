@@ -9,17 +9,17 @@ import bricks.slab.TextSlab;
 import bricks.input.keyboard.Keyboard;
 import bricks.monitor.Monitor;
 import bricks.trade.Host;
-import bricks.var.Push;
-import bricks.var.Var;
-import bricks.var.impulse.Impulse;
-import bricks.var.subject.SubjectPush;
+import bricks.trait.Trait;
+import bricks.trait.Traits;
+import bricks.trait.sensor.Sensor;
+import bricks.trait.subject.SubjectPush;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
 
 
 public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
 
-    public Push<Long> doubleClicks;
+    public Trait<Long> doubleClicks;
     boolean assisted;
     Monitor unselectListener;
 
@@ -29,8 +29,8 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
 
     public AssistedNoteBrick(Host host) {
         super(host);
-        doubleClicks = Var.push(0L);
-        clicks.act((p, n) -> {
+        doubleClicks = Traits.set(0L);
+        clicks.act(doubleClicks.get(), (p, n) -> {
             if(n - p < 300) doubleClicks.set(n);
         });
 
@@ -58,9 +58,9 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
         $bricks.set(supplement);
     }
 
-    Impulse whenTextChange;
-    Impulse whenAdvicesChange;
-    Impulse whenDoubleClick;
+    Sensor whenTextChange;
+    Sensor whenAdvicesChange;
+    Sensor whenDoubleClick;
 
     @Override
     public void update() {
@@ -101,14 +101,14 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
             }
         }
 
-        if(whenTextChange.occur() | whenAdvicesChange.occur()) {
+        if(whenTextChange.check() | whenAdvicesChange.check()) {
             if(assisted) {
                 var str = text().get();
                 assistance.setOptions(advices.select(s -> s.raw().toString().contains(str)));
             }
         }
 
-        if(whenDoubleClick.occur()) {
+        if(whenDoubleClick.check()) {
             if(!assisted) {
                 requestAssistance(false);
             } else {

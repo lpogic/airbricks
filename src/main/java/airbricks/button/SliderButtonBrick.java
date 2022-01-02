@@ -1,6 +1,7 @@
 package airbricks.button;
 
 import airbricks.Airbrick;
+import bricks.BricksMath;
 import bricks.Color;
 import bricks.Sized;
 import bricks.input.mouse.MouseButton;
@@ -8,9 +9,9 @@ import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
 import bricks.input.mouse.Mouse;
-import bricks.var.Pull;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
+import bricks.trait.Trait;
+import bricks.trait.Traits;
+import bricks.trait.number.NumberTrait;
 
 public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab {
 
@@ -18,13 +19,13 @@ public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab
     public boolean indicated;
 
     public final RectangleSlab background;
-    public final Pull<Color> backgroundColorDefault;
-    public final Pull<Color> backgroundColorIndicated;
+    public final Trait<Color> backgroundColorDefault;
+    public final Trait<Color> backgroundColorIndicated;
 
     public final RectangleSlab outline;
-    public final Pull<Color> outlineColorDefault;
+    public final Trait<Color> outlineColorDefault;
 
-    public final NumPull outlineThick;
+    public final NumberTrait outlineThick;
 
 
     public SliderButtonBrick(Airbrick<?> host) {
@@ -33,12 +34,12 @@ public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab
         pressed = false;
         indicated = false;
 
-        backgroundColorDefault = Var.pull(Color.hex("#4b735d88"));
-        backgroundColorIndicated = Var.pull(Color.hex("#4b735d"));
+        backgroundColorDefault = Traits.set(Color.hex("#4b735d88"));
+        backgroundColorIndicated = Traits.set(Color.hex("#4b735d"));
 
-        outlineColorDefault = Var.pull(Color.hex("#0000"));
+        outlineColorDefault = Traits.set(Color.hex("#0000"));
 
-        outlineThick = Var.num(3);
+        outlineThick = Traits.num(3);
 
         outline = new RectangleSlab(this) {{
             color().let(outlineColorDefault);
@@ -73,7 +74,7 @@ public class SliderButtonBrick extends Airbrick<Airbrick<?>> implements WithSlab
                 indicated = seeCursor;
                 if(pressed) {
                     var h2 = height().getFloat() / 2;
-                    y().set(NumPull.trim(pe.y - pressOffsetY,
+                    y().set(BricksMath.trim(pe.y - pressOffsetY,
                             host.top().getFloat() + h2,
                             host.bottom().getFloat() - h2));
                 }

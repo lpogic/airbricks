@@ -12,8 +12,8 @@ import bricks.Sized;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Shape;
 import bricks.slab.WithShape;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
+import bricks.trait.Traits;
+import bricks.trait.number.NumberTrait;
 import bricks.wall.Brick;
 import suite.suite.Subject;
 import suite.suite.action.Statement;
@@ -26,7 +26,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Loca
     RectangleSlab bg;
     RectangleSlab frame;
 
-    NumPull labelColumnWidth;
+    NumberTrait labelColumnWidth;
 
     Statement submit;
     Statement cancel;
@@ -34,7 +34,7 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Loca
     public FastFormBrick(Brick<?> host) {
         super(host);
         table = new Table();
-        labelColumnWidth = Var.num(120);
+        labelColumnWidth = Traits.num(120);
         table.addColumns($($(labelColumnWidth), $(200)));
 
         frame = new RectangleSlab(this) {{
@@ -197,12 +197,12 @@ public class FastFormBrick extends Airbrick<Brick<?>> implements WithShape, Loca
     }
 
     @Override
-    public NumPull x() {
+    public NumberTrait x() {
         return table.x();
     }
 
     @Override
-    public NumPull y() {
+    public NumberTrait y() {
         return table.y();
     }
 }

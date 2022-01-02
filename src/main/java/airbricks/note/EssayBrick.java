@@ -2,7 +2,6 @@ package airbricks.note;
 
 import airbricks.PowerBrick;
 import airbricks.text.ArticleBrick;
-import airbricks.text.TextBrick;
 import bricks.Color;
 import bricks.Sized;
 import bricks.input.Story;
@@ -10,15 +9,12 @@ import bricks.input.keyboard.Key;
 import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
 import bricks.input.mouse.MouseButton;
-import bricks.slab.GradientSlab;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.slab.WithSlab;
 import bricks.trade.Host;
-import bricks.var.Pull;
-import bricks.var.Push;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
+import bricks.trait.*;
+import bricks.trait.number.NumberTrait;
 import suite.suite.Subject;
 
 import static suite.suite.$uite.$;
@@ -26,20 +22,20 @@ import static suite.suite.$uite.$;
 public class EssayBrick extends PowerBrick<Host> implements WithSlab {
 
     public boolean pressed;
-    public Push<Long> clicks;
+    public Trait<Long> clicks;
 
     public final RectangleSlab background;
-    public final Pull<Color> backgroundColorDefault;
-    public final Pull<Color> backgroundColorSeeCursor;
-    public final Pull<Color> backgroundColorPressed;
+    public final Trait<Color> backgroundColorDefault;
+    public final Trait<Color> backgroundColorSeeCursor;
+    public final Trait<Color> backgroundColorPressed;
 
     public final RectangleSlab outline;
-    public final Pull<Color> outlineColorDefault;
-    public final Pull<Color> outlineColorSeeKeyboard;
+    public final Trait<Color> outlineColorDefault;
+    public final Trait<Color> outlineColorSeeKeyboard;
 
     public final RectangleSlab cursorLine;
 
-    public final NumPull outlineThick;
+    public final NumberTrait outlineThick;
 
     protected ArticleBrick article;
     private final Story story;
@@ -48,16 +44,16 @@ public class EssayBrick extends PowerBrick<Host> implements WithSlab {
         super(host);
 
         pressed = false;
-        clicks = Var.push(0L);
+        clicks = Traits.set(0L);
 
-        backgroundColorDefault = Var.pull(Color.hex("#292B2B"));
-        backgroundColorSeeCursor = Var.pull(Color.hex("#212323"));
-        backgroundColorPressed = Var.pull(Color.hex("#191B1B"));
+        backgroundColorDefault = Traits.set(Color.hex("#292B2B"));
+        backgroundColorSeeCursor = Traits.set(Color.hex("#212323"));
+        backgroundColorPressed = Traits.set(Color.hex("#191B1B"));
 
-        outlineColorDefault = Var.pull(Color.hex("#1e1a2c"));
-        outlineColorSeeKeyboard = Var.pull(Color.mix(1, .8, .6));
+        outlineColorDefault = Traits.set(Color.hex("#1e1a2c"));
+        outlineColorSeeKeyboard = Traits.set(Color.mix(1, .8, .6));
 
-        outlineThick = Var.num(4);
+        outlineThick = Traits.num(4);
 
         outline = new RectangleSlab(this) {{
             color().let(() -> seeKeyboard() ?
@@ -187,7 +183,7 @@ public class EssayBrick extends PowerBrick<Host> implements WithSlab {
         return clicks;
     }
 
-    public Push<String> text() {
+    public Var<String> text() {
         return article.text();
     }
 

@@ -5,6 +5,7 @@ import airbricks.FantomBrick;
 import airbricks.button.SliderButtonBrick;
 import airbricks.keyboard.KeyboardClient;
 import airbricks.keyboard.KeyboardDealer;
+import bricks.BricksMath;
 import bricks.Color;
 import bricks.font.BackedFont;
 import bricks.font.FontManager;
@@ -17,9 +18,9 @@ import bricks.input.mouse.MouseButton;
 import bricks.slab.RectangleSlab;
 import bricks.slab.Slab;
 import bricks.trade.Host;
-import bricks.var.*;
-import bricks.var.impulse.Impulse;
-import bricks.var.num.NumPull;
+import bricks.trait.*;
+import bricks.trait.sensor.Sensor;
+import bricks.trait.number.NumberTrait;
 import suite.suite.Subject;
 import suite.suite.util.Cascade;
 import suite.suite.util.Sequence;
@@ -36,9 +37,9 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         List<String> lines;
         private int textLength;
         int lineOffset;
-        Push<Integer> selectionHead;
-        Push<Integer> selectionTail;
-        private final Pull<Integer> bricksCount;
+        Trait<Integer> selectionHead;
+        Trait<Integer> selectionTail;
+        private final Trait<Integer> bricksCount;
 
 
 
@@ -46,9 +47,9 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
             super(host);
             lineOffset = 0;
             lines = new ArrayList<>();
-            selectionHead = Var.push(0);
-            selectionTail = Var.push(0);
-            bricksCount = Var.pull(5);
+            selectionHead = Traits.set(0);
+            selectionTail = Traits.set(0);
+            bricksCount = Traits.set(5);
         }
 
         public int getBricksCount() {
@@ -243,26 +244,26 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
 
     SliderButtonBrick slider;
 
-    NumPull fontHeight;
-    NumPull width;
-    NumPull left;
+    NumberTrait fontHeight;
+    NumberTrait width;
+    NumberTrait left;
 
-    final Pull<Color> textColor;
+    final Trait<Color> textColor;
 
-    Impulse sliderYChange;
+    Sensor sliderYChange;
 
     public ArticleBrick(Host host) {
         super(host);
         editable = true;
         hasKeyboard = HasKeyboard.NO;
 
-        textColor = Var.pull(Color.mix(0,1,1));
+        textColor = Traits.set(Color.mix(0,1,1));
 
         lines = new Lines(this);
 
-        fontHeight = Var.num(20);
-        width = Var.num(200);
-        left = Var.num(400);
+        fontHeight = Traits.num(20);
+        width = Traits.num(200);
+        left = Traits.num(400);
 
         cursorPosition = 0;
 
@@ -343,10 +344,10 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
     @Override
     public void update() {
 
-        if(sliderYChange.occur()) {
+        if(sliderYChange.check()) {
             var part = (slider.top().getFloat() - top().getFloat()) / (height().getFloat() - slider.height().getFloat());
             var maxOffset = lines.getMaxOffset();
-            lines.lineOffset = NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset);
+            lines.lineOffset = BricksMath.trim(Math.round((maxOffset) * part), 0, maxOffset);
             updateCursor(cursorPosition, false);
         }
 
@@ -1044,8 +1045,9 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
     }
 
 
-    public Push<String> text() {
-        return new SubjectBasedPush<>("") {
+    public Var<String> text() {
+        return new Var<>() {
+
 
             @Override
             public String get() {
@@ -1059,7 +1061,6 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
                 updateCursor(0, true);
                 lines.resetSelection();
                 hideCursor();
-                super.set(s);
             }
         };
     }
@@ -1072,12 +1073,12 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         return editable;
     }
 
-    public NumPull textHeight() {
+    public NumberTrait textHeight() {
         return fontHeight;
     }
 
-    public NumPull height() {
-        return new NumPull() {
+    public NumberTrait height() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 lines.bricksCount.let(() -> (int)(s.get().floatValue() / fontHeight.getFloat()));
@@ -1090,16 +1091,16 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         };
     }
 
-    public NumPull width() {
+    public NumberTrait width() {
         return width;
     }
 
-    public NumPull left() {
+    public NumberTrait left() {
         return left;
     }
 
-    public NumPull right() {
-        return new NumPull() {
+    public NumberTrait right() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 left.let(() -> s.get().floatValue() - width.getFloat());
@@ -1112,12 +1113,12 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         };
     }
 
-    public NumPull top() {
+    public NumberTrait top() {
         return lines.bricks().as(SelectableTextBrick.class).top();
     }
 
-    public NumPull bottom() {
-        return new NumPull() {
+    public NumberTrait bottom() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 top().let(() -> s.get().floatValue() - height().getFloat());
@@ -1130,8 +1131,8 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         };
     }
 
-    public NumPull x() {
-        return new NumPull() {
+    public NumberTrait x() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 left.let(() -> s.get().floatValue() - width.getFloat() / 2);
@@ -1144,8 +1145,8 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
         };
     }
 
-    public NumPull y() {
-        return new NumPull() {
+    public NumberTrait y() {
+        return new NumberTrait() {
             @Override
             public void let(Supplier<Number> s) {
                 top().let(() -> s.get().floatValue() - height().getFloat() / 2);
@@ -1188,11 +1189,11 @@ public class ArticleBrick extends Airbrick<Host> implements KeyboardClient, Slab
             lay(slider);
             var part = (bottom().getFloat() - top().getFloat() - slider.height().getFloat()) / maxOffset;
             slider.y().set(top().getFloat() + slider.height().getFloat() / 2 + part * lines.lineOffset);
-            sliderYChange.occur();
+            sliderYChange.check();
         } else if(lines.lineOffset > 0) {
             lay(slider);
             slider.y().set(bottom().getFloat() - slider.height().getFloat() / 2);
-            sliderYChange.occur();
+            sliderYChange.check();
         } else {
             drop(slider);
         }

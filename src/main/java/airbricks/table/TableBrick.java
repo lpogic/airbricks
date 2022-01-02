@@ -1,14 +1,11 @@
 package airbricks.table;
 
 import airbricks.Airbrick;
-import bricks.slab.WithShape;
+import bricks.slab.*;
 import bricks.Color;
 import bricks.Location;
-import bricks.slab.RectangleSlab;
-import bricks.slab.Printable;
-import bricks.slab.Shape;
 import bricks.trade.Host;
-import bricks.var.num.NumPull;
+import bricks.trait.number.NumberTrait;
 import bricks.wall.Updatable;
 
 import static suite.suite.$uite.$;
@@ -49,11 +46,11 @@ public abstract class TableBrick extends Airbrick<Host> implements WithShape, Lo
             this.row = row;
         }
 
-        public Column add(Rectangle rectangle) {
+        public Column add(Slab slab) {
             if(table.columnsSize() <= col) table.addColumns($(100));
             var sector = table.sector(col, col, row, row);
-            rectangle.fill(sector);
-            if(rectangle instanceof Printable || rectangle instanceof Updatable) $bricks.set(rectangle);
+            slab.fill(sector);
+            if(slab instanceof Printable || slab instanceof Updatable) $bricks.set(slab);
             return new Column(col++);
         }
 
@@ -74,11 +71,11 @@ public abstract class TableBrick extends Airbrick<Host> implements WithShape, Lo
             this.col = col;
         }
 
-        public Row add(Rectangle rectangle) {
+        public Row add(Slab slab) {
             if(table.rowsSize() <= row) table.addRows($(35));
             var sector = table.sector(col, col, row, row);
-            rectangle.fill(sector);
-            if(rectangle instanceof Printable || rectangle instanceof Updatable) $bricks.set(rectangle);
+            slab.fill(sector);
+            if(slab instanceof Printable || slab instanceof Updatable) $bricks.set(slab);
             return new Row(row++);
         }
 
@@ -97,12 +94,12 @@ public abstract class TableBrick extends Airbrick<Host> implements WithShape, Lo
     }
 
     @Override
-    public NumPull x() {
+    public NumberTrait x() {
         return table.x();
     }
 
     @Override
-    public NumPull y() {
+    public NumberTrait y() {
         return table.y();
     }
 }

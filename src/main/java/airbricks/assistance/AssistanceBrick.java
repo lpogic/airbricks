@@ -2,6 +2,7 @@ package airbricks.assistance;
 
 import airbricks.Airbrick;
 import airbricks.PowerBrick;
+import bricks.BricksMath;
 import bricks.Color;
 import bricks.input.mouse.MouseButton;
 import bricks.slab.Shape;
@@ -13,11 +14,11 @@ import bricks.slab.RectangleSlab;
 import bricks.input.keyboard.Keyboard;
 import bricks.input.mouse.Mouse;
 import bricks.trade.Host;
-import bricks.var.Push;
-import bricks.var.Var;
-import bricks.var.impulse.Constant;
-import bricks.var.impulse.Impulse;
-import bricks.var.num.NumPull;
+import bricks.trait.Push;
+import bricks.trait.PushVar;
+import bricks.trait.StoredPushVar;
+import bricks.trait.sensor.Constant;
+import bricks.trait.sensor.Sensor;
 import airbricks.FantomBrick;
 import suite.suite.Subject;
 import suite.suite.util.Series;
@@ -114,8 +115,8 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
 
     List<Object> options;
 
-    Push<Integer> optionOffset;
-    Push<Object> picks;
+    StoredPushVar<Integer> optionOffset;
+    StoredPushVar<Object> picks;
 
     boolean wrapped;
     boolean uprising;
@@ -124,12 +125,12 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
     public AssistanceBrick(Host host) {
         super(host);
 
-        picks = Var.push(0);
+        picks = PushVar.store(0);
         bg = new RectangleSlab(this);
         bg.color().set(Color.BLACK);
         wrapped = false;
         uprising = false;
-        optionOffset = Var.push(0);
+        optionOffset = PushVar.store(0);
         optionButtonSet = new OptionButtonSet(this);
         options = new ArrayList<>();
         setMaxDisplayedOptions(3);
@@ -173,7 +174,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
         } else {
             slider.y().set(top().getFloat() + slider.height().getFloat() / 2 + part * offset);
         }
-        sliderYChange.occur();
+        sliderYChange.check();
     }
 
     public void setMaxDisplayedOptions(int max) {
@@ -298,7 +299,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
         return bg;
     }
 
-    Impulse sliderYChange = Constant.getInstance();
+    Sensor sliderYChange = Constant.getInstance();
 
     @Override
     public void update() {
@@ -353,11 +354,11 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
             }
         }
 
-        if(sliderYChange.occur()) {
+        if(sliderYChange.check()) {
             var part = (slider.top().getFloat() - top().getFloat()) / (height().getFloat() - slider.height().getFloat());
             var maxOffset = options.size() - optionButtonSet.bricks().size();
-            if(uprising) optionOffset.set(maxOffset - NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset));
-            else optionOffset.set(NumPull.trim(Math.round((maxOffset) * part), 0, maxOffset));
+            if(uprising) optionOffset.set(maxOffset - BricksMath.trim(Math.round((maxOffset) * part), 0, maxOffset));
+            else optionOffset.set(BricksMath.trim(Math.round((maxOffset) * part), 0, maxOffset));
         }
 
         super.update();

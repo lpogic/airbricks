@@ -1,37 +1,37 @@
 package airbricks.table;
 
 import bricks.slab.Shape;
-import bricks.var.Source;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
-import bricks.var.num.NumSource;
+import bricks.trait.Source;
+import bricks.trait.Traits;
+import bricks.trait.number.NumberTrait;
+import bricks.trait.number.NumberSource;
 
 public interface Tabular extends Shape {
     Tabular sector(int column, int row);
     Tabular sector(int left, int right, int top, int bottom);
 
     class Column {
-        NumPull left;
-        NumPull width;
+        NumberTrait left;
+        NumberTrait width;
 
         public Column(Source<Number> width) {
-            this.width = Var.num(width);
-            this.left = Var.num(left);
+            this.width = Traits.num(width);
+            this.left = Traits.num(left);
         }
 
-        public NumSource x() {
+        public NumberSource x() {
             return () -> left.get().floatValue() + width.get().floatValue() / 2;
         }
 
-        public NumSource left() {
+        public NumberSource left() {
             return left;
         }
 
-        public NumSource right() {
+        public NumberSource right() {
             return () -> left.get().floatValue() + width.get().floatValue();
         }
 
-        public NumPull width() {
+        public NumberTrait width() {
             return width;
         }
 
@@ -50,27 +50,27 @@ public interface Tabular extends Shape {
     }
 
     class Row {
-        NumPull top;
-        NumPull height;
+        NumberTrait top;
+        NumberTrait height;
 
         public Row(Source<Number> height) {
-            this.height = Var.num(height);
-            this.top = Var.num(0);
+            this.height = Traits.num(height);
+            this.top = Traits.num(0);
         }
 
-        public NumSource y() {
+        public NumberSource y() {
             return () -> top.get().floatValue() + height.get().floatValue() / 2;
         }
 
-        public NumSource top() {
+        public NumberSource top() {
             return top;
         }
 
-        public NumSource bottom() {
+        public NumberSource bottom() {
             return () -> top.get().floatValue() + height.get().floatValue();
         }
 
-        public NumPull height() {
+        public NumberTrait height() {
             return height;
         }
 

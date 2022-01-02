@@ -17,12 +17,10 @@ import bricks.input.mouse.Mouse;
 import bricks.input.Story;
 import bricks.input.UserAction;
 import bricks.trade.Host;
-import bricks.var.OverriddenPush;
-import bricks.var.Pull;
-import bricks.var.Push;
-import bricks.var.Var;
-import bricks.var.num.NumPull;
-import bricks.var.num.NumSource;
+import bricks.trait.*;
+import bricks.trait.number.NumberTrait;
+import bricks.trait.number.NumberSource;
+import suite.suite.action.Statement;
 import suite.suite.util.Cascade;
 
 public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, Location {
@@ -30,24 +28,24 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
     protected boolean editable;
     public HasKeyboard hasKeyboard;
 
-    public final Push<String> text;
+    public final Trait<String> text;
     public final SelectableTextBrick stb;
     public final RectangleSlab cursor;
-    public final Pull<Integer> cursorPosition;
+    public final Trait<Integer> cursorPosition;
 
     public TextBrick(Host host) {
         super(host);
         editable = true;
         hasKeyboard = HasKeyboard.NO;
 
-        text = Var.push("");
+        text = Traits.set("");
         stb = new SelectableTextBrick(this) {{
             height().set(20);
             color().set(Color.mix(1, 1, 1));
         }};
         stb.text().let(text);
 
-        cursorPosition = Var.pull(0);
+        cursorPosition = Traits.set(0);
 
         text.act(() -> {
             int len = text.get().length();
@@ -659,12 +657,17 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
         }
     }
 
-    public Pull<Integer> cursorPosition() {
+    public Source<Integer> cursorPosition() {
         return cursorPosition;
     }
 
-    public Push<String> text() {
-        return new OverriddenPush<>(text) {
+    public PushVar<String> text() {
+        return new PushVar<>() {
+
+            @Override
+            public String get() {
+                return text.get();
+            }
 
             @Override
             public void set(String s) {
@@ -684,34 +687,34 @@ public class TextBrick extends Airbrick<Host> implements KeyboardClient, Shape, 
         return editable;
     }
 
-    public NumPull height() {
+    public NumberTrait height() {
         return stb.height();
     }
-    public NumSource width() {
+    public NumberSource width() {
         return stb.width();
     }
 
-    public NumPull left() {
+    public NumberTrait left() {
         return stb.left();
     }
 
-    public NumPull right() {
+    public NumberTrait right() {
         return stb.right();
     }
 
-    public NumPull top() {
+    public NumberTrait top() {
         return stb.top();
     }
 
-    public NumPull bottom() {
+    public NumberTrait bottom() {
         return stb.bottom();
     }
 
-    public NumPull x() {
+    public NumberTrait x() {
         return stb.x();
     }
 
-    public NumPull y() {
+    public NumberTrait y() {
         return stb.y();
     }
 

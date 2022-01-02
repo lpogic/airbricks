@@ -12,8 +12,9 @@ import bricks.slab.CircleSlab;
 import bricks.slab.RectangleSlab;
 import bricks.slab.TextSlab;
 import bricks.trade.Host;
-import bricks.var.Pull;
-import bricks.var.Push;
+import bricks.trait.Pull;
+import bricks.trait.Push;
+import bricks.trait.Target;
 import bricks.wall.Brick;
 import bricks.wall.MouseClient;
 import suite.suite.Sub;
@@ -284,7 +285,7 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
             for(var d : data) {
                 if(d.is(String.class)) {
                     switch (d.asString()) {
-                        case "text" -> pushString(text(), d.in());
+                        case "text" -> setString(text(), d.in());
                         case "textColor" -> pullColor(note.stb.color(), d.in());
                         case "x" -> pullNumber(x(), d.in());
                         case "y" -> pullNumber(y(), d.in());
@@ -349,7 +350,7 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
             for(var d : data) {
                 if(d.is(String.class)) {
                     switch (d.asString()) {
-                        case "text" -> pushString(text(), d.in());
+                        case "text" -> setString(text(), d.in());
                         case "textColor" -> pullColor(article.textColor(), d.in());
                         case "textHeight" -> pullNumber(article.textHeight(), d.in());
                         case "x" -> pullNumber(x(), d.in());
@@ -382,7 +383,7 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
         else if(v.is(String.class)) p.set(v.one());
     }
 
-    private static void pushString(Push<String> p, Sub v) {
+    private static void setString(Target<String> p, Sub v) {
         if(v.is(String.class)) p.set(v.one());
     }
 
