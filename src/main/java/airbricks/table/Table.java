@@ -180,7 +180,7 @@ public class Table implements Tabular, Location {
 
     public int addColumns(Series $cols) {
         int index = 0;
-        for(var $ : $cols.list()) {
+        for(var $ : $cols.autoIn()) {
 
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));
@@ -222,7 +222,7 @@ public class Table implements Tabular, Location {
             addColumns($cols);
             return;
         }
-        for(var $ : $cols.list()) {
+        for(var $ : $cols.autoIn()) {
 
             if($.is(Source.class)) {
                 $.reset(new Column($.asExpected()));

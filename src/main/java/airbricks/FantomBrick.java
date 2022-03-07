@@ -13,7 +13,6 @@ import bricks.slab.RectangleSlab;
 import bricks.slab.TextSlab;
 import bricks.trade.Host;
 import bricks.trait.Pull;
-import bricks.trait.Push;
 import bricks.trait.Target;
 import bricks.wall.Brick;
 import bricks.wall.MouseClient;
@@ -39,7 +38,7 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
     @Override
     public CursorOver acceptCursor(Located crd) {
         CursorOver brickCursorOver = CursorOver.NO;
-        for (var mo : $bricks.reverse().list().each(MouseClient.class)) {
+        for (var mo : $bricks.reverse().autoIn().each(MouseClient.class)) {
             if (brickCursorOver != CursorOver.NO) mo.depriveCursor();
             else brickCursorOver = mo.acceptCursor(crd);
         }
@@ -48,7 +47,7 @@ public abstract class FantomBrick<H extends Host> extends Brick<H> implements Mo
 
     @Override
     public void depriveCursor() {
-        for(var mc : $bricks.list().each(MouseClient.class)) {
+        for(var mc : $bricks.autoIn().each(MouseClient.class)) {
             mc.depriveCursor();
         }
         cursorOver = CursorOver.NO;

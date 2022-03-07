@@ -222,7 +222,7 @@ public abstract class Wall extends bricks.wall.Wall implements KeyboardClient, M
 
     @Override
     public void depriveCursor() {
-        for(var mc : $bricks.list().each(MouseClient.class)) {
+        for(var mc : $bricks.autoIn().each(MouseClient.class)) {
             mc.depriveCursor();
         }
         cursorOver = CursorOver.NO;

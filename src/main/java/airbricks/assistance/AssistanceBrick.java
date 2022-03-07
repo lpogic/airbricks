@@ -251,7 +251,7 @@ public class AssistanceBrick extends Airbrick<Host> implements WithSlab {
 
     public void setOptions(Series options) {
         this.options = new ArrayList<>();
-        for(var o : options.list().each()) {
+        for(var o : options.autoIn().each()) {
             this.options.add(o);
         }
         optionOffset.set(0);

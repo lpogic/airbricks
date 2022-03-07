@@ -40,7 +40,7 @@ public class AssistedNoteBrick extends NoteBrick implements AssistanceClient {
         supplement = new TextSlab(this);
         supplement.text().let(() -> {
             var str = text().get();
-            for(var advice : advices.list().each().convert(Object::toString)) {
+            for(var advice : advices.autoIn().each().convert(Object::toString)) {
                 if(advice.startsWith(str)) {
                     return advice.substring(str.length());
                 }
